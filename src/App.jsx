@@ -145,7 +145,10 @@ export default function App() {
 
         <main className="masonry" aria-live="polite">
           {visibleItems.map((item) => (
-            <div key={item.id} className="masonryItem">
+            <div
+              key={item.id}
+              className={item.columnSpanAll ? 'masonryItem masonryItem--spanAll' : 'masonryItem'}
+            >
               <button
                 type="button"
                 className="card"
