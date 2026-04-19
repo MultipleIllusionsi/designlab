@@ -353,6 +353,10 @@
     flex-wrap: nowrap;
     row-gap: 0;
     background: none;
+    padding-top: calc(12px + env(safe-area-inset-top, 0px));
+    padding-right: max(12px, env(safe-area-inset-right, 0px));
+    padding-bottom: 12px;
+    padding-left: max(12px, env(safe-area-inset-left, 0px));
   }
 
   .filtersDesktop {
