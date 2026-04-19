@@ -28,20 +28,20 @@ function useFinePointerHover() {
   return matches
 }
 
-function GridVideo({ src, label, className, suspendSrc }) {
+function GridVideo({ src, label, className, pauseForLightbox }) {
   const ref = useRef(null)
   const fineHover = useFinePointerHover()
 
   useEffect(() => {
     const el = ref.current
     if (!el) return
-    if (suspendSrc) {
+    if (pauseForLightbox) {
       el.pause()
       return
     }
     if (fineHover) return
     void el.play().catch(() => {})
-  }, [suspendSrc, fineHover])
+  }, [pauseForLightbox, fineHover])
 
   const onEnter = useCallback(() => {
     if (!fineHover) return
@@ -61,11 +61,11 @@ function GridVideo({ src, label, className, suspendSrc }) {
       <video
         ref={ref}
         className={className}
-        src={suspendSrc ? undefined : src}
+        src={src}
         muted
         playsInline
         loop
-        autoPlay={!fineHover && !suspendSrc}
+        autoPlay={!fineHover && !pauseForLightbox}
         preload="metadata"
         aria-label={label}
       />
@@ -105,7 +105,7 @@ function MediaView({ item, className, inLightbox, lightboxOpenForThisItem }) {
         className={className}
         src={media.src}
         label={item.alt}
-        suspendSrc={lightboxOpenForThisItem}
+        pauseForLightbox={lightboxOpenForThisItem}
       />
     )
   }
