@@ -3,7 +3,8 @@
   background: #000;
   color: #fff;
   padding: 32px 24px 32px;
-  padding-top: 112px;
+  /* Match .topNav height: base offset + status / Dynamic Island safe area */
+  padding-top: calc(112px + env(safe-area-inset-top, 0px));
 }
 
 .page--behindLightbox {
@@ -20,8 +21,14 @@
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  padding: 32px 24px 16px;
-  background: linear-gradient(to bottom, #000 70%, transparent);
+  padding-top: calc(32px + env(safe-area-inset-top, 0px));
+  padding-right: max(24px, env(safe-area-inset-right, 0px));
+  padding-bottom: 16px;
+  padding-left: max(24px, env(safe-area-inset-left, 0px));
+  background: linear-gradient(to bottom, rgba(0,0,0,0.96) 72%, transparent);
+  /* Compositing layer: mitigates iOS Safari fixed/sticky misplacement with dynamic chrome */
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
 }
 
 .logoMark {
@@ -137,11 +144,15 @@
   border-radius: 12px;
   overflow: hidden;
   background: #111;
-  opacity: 0.4;
+  opacity: 1;
   transition: opacity 0.25s ease;
 }
 
 @media (hover: hover) and (pointer: fine) {
+  .card {
+    opacity: 0.4;
+  }
+
   .card:hover {
     opacity: 1;
   }
@@ -186,6 +197,16 @@
   -webkit-transform: translateZ(0);
 }
 
+/* Full-viewport backdrop blur is disproportionately expensive on mobile GPUs and
+   competes with video decode when the lightbox opens. */
+@media (max-width: 639px) {
+  .lightbox::before {
+    background-color: rgba(0, 0, 0, 0.82);
+    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(12px);
+  }
+}
+
 .lightboxPanel {
   position: relative;
   z-index: 1;
@@ -228,7 +249,7 @@
 @media (max-width: 639px) {
   .topNav {
     flex-wrap: wrap;
-    row-gap: 12px;
+    row-gap: 16px;
   }
 
   .filters {

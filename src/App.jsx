@@ -28,9 +28,20 @@ function useFinePointerHover() {
   return matches
 }
 
-function GridVideo({ src, label, className }) {
+function GridVideo({ src, label, className, suspendSrc }) {
   const ref = useRef(null)
   const fineHover = useFinePointerHover()
+
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    if (suspendSrc) {
+      el.pause()
+      return
+    }
+    if (fineHover) return
+    void el.play().catch(() => {})
+  }, [suspendSrc, fineHover])
 
   const onEnter = useCallback(() => {
     if (!fineHover) return
@@ -50,11 +61,11 @@ function GridVideo({ src, label, className }) {
       <video
         ref={ref}
         className={className}
-        src={src}
+        src={suspendSrc ? undefined : src}
         muted
         playsInline
         loop
-        autoPlay={!fineHover}
+        autoPlay={!fineHover && !suspendSrc}
         preload="metadata"
         aria-label={label}
       />
@@ -72,7 +83,7 @@ function MenuIcon() {
   )
 }
 
-function MediaView({ item, className, inLightbox }) {
+function MediaView({ item, className, inLightbox, lightboxOpenForThisItem }) {
   const { media } = item
   if (media.type === 'video') {
     if (inLightbox) {
@@ -84,13 +95,29 @@ function MediaView({ item, className, inLightbox }) {
           playsInline
           loop
           autoPlay
+          preload="auto"
           aria-label={item.alt}
         />
       )
     }
-    return <GridVideo className={className} src={media.src} label={item.alt} />
+    return (
+      <GridVideo
+        className={className}
+        src={media.src}
+        label={item.alt}
+        suspendSrc={lightboxOpenForThisItem}
+      />
+    )
   }
-  return <img className={className} src={media.src} alt={item.alt} loading="lazy" />
+  return (
+    <img
+      className={className}
+      src={media.src}
+      alt={item.alt}
+      loading={inLightbox ? 'eager' : 'lazy'}
+      fetchPriority={inLightbox ? 'high' : undefined}
+    />
+  )
 }
 
 export default function App() {
@@ -156,7 +183,7 @@ export default function App() {
                 aria-haspopup="dialog"
               >
                 <span className="cardInner">
-                  <MediaView item={item} />
+                  <MediaView item={item} lightboxOpenForThisItem={activeItem?.id === item.id} />
                 </span>
               </button>
             </div>
