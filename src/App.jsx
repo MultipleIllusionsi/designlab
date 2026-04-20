@@ -29,49 +29,70 @@ function useFinePointerHover() {
 }
 
 function GridVideo({ src, label, className, lightboxState }) {
-  const ref = useRef(null)
+  const wrapRef = useRef(null)
+  const videoRef = useRef(null)
   const fineHover = useFinePointerHover()
 
   useEffect(() => {
-    const el = ref.current
+    const el = videoRef.current
     if (!el) return
     if (lightboxState === 'dimmed') {
       el.pause()
-      return
+      return undefined
     }
     if (lightboxState === 'expanded') {
       void el.play().catch(() => {})
-      return
+      return undefined
     }
-    if (fineHover) return
-    void el.play().catch(() => {})
-  }, [lightboxState, fineHover])
+    if (fineHover) {
+      el.pause()
+      return undefined
+    }
+
+    const observeEl = wrapRef.current
+    if (!observeEl) return undefined
+    if (typeof IntersectionObserver === 'undefined') {
+      void el.play().catch(() => {})
+      return undefined
+    }
+    const io = new IntersectionObserver(
+      (entries) => {
+        const v = videoRef.current
+        if (!v) return
+        if (entries.some((e) => e.isIntersecting)) void v.play().catch(() => {})
+        else v.pause()
+      },
+      { root: null, rootMargin: '0px', threshold: 0 },
+    )
+    io.observe(observeEl)
+    return () => io.disconnect()
+  }, [lightboxState, fineHover, src])
 
   const onEnter = useCallback(() => {
     if (!fineHover) return
     if (lightboxState === 'expanded') return
-    void ref.current?.play()
+    void videoRef.current?.play()
   }, [fineHover, lightboxState])
 
   const onLeave = useCallback(() => {
     if (!fineHover) return
     if (lightboxState === 'expanded') return
-    const el = ref.current
-    if (!el) return
-    el.pause()
-    el.currentTime = 0
+    const v = videoRef.current
+    if (!v) return
+    v.pause()
+    v.currentTime = 0
   }, [fineHover, lightboxState])
 
   return (
-    <span className="gridVideoWrap" onMouseEnter={onEnter} onMouseLeave={onLeave}>
+    <span ref={wrapRef} className="gridVideoWrap" onMouseEnter={onEnter} onMouseLeave={onLeave}>
       <video
-        ref={ref}
+        ref={videoRef}
         className={className}
         src={src}
         muted
         playsInline
         loop
-        autoPlay={!fineHover && lightboxState !== 'dimmed'}
+        autoPlay={false}
         preload="metadata"
         aria-label={label}
       />
