@@ -104,23 +104,9 @@ function FiltersNav({ className, activeFilter, onSelectFilter, onPick }) {
   )
 }
 
-function MediaView({ item, className, inLightbox, lightboxOpenForThisItem }) {
+function MediaView({ item, className, lightboxOpenForThisItem }) {
   const { media } = item
   if (media.type === 'video') {
-    if (inLightbox) {
-      return (
-        <video
-          className={className}
-          src={media.src}
-          muted
-          playsInline
-          loop
-          autoPlay
-          preload="auto"
-          aria-label={item.alt}
-        />
-      )
-    }
     return (
       <GridVideo
         className={className}
@@ -130,14 +116,65 @@ function MediaView({ item, className, inLightbox, lightboxOpenForThisItem }) {
       />
     )
   }
+  return <img className={className} src={media.src} alt={item.alt} loading="lazy" />
+}
+
+/** Lightbox-only: 56px spinner until image or video is ready. */
+function LightboxMedia({ item }) {
+  const [mediaReady, setMediaReady] = useState(false)
+  const mediaRef = useRef(null)
+  const { media } = item
+
+  const markReady = useCallback(() => setMediaReady(true), [])
+
+  useLayoutEffect(() => {
+    const el = mediaRef.current
+    if (!el) return
+    if (media.type === 'image') {
+      if (el instanceof HTMLImageElement && el.complete && el.naturalWidth > 0) {
+        setMediaReady(true)
+      }
+    } else if (el instanceof HTMLVideoElement && el.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
+      setMediaReady(true)
+    }
+  }, [media.type, media.src])
+
+  const mediaClassName = `lightboxMedia${mediaReady ? '' : ' lightboxMedia--pending'}`
+
   return (
-    <img
-      className={className}
-      src={media.src}
-      alt={item.alt}
-      loading={inLightbox ? 'eager' : 'lazy'}
-      fetchPriority={inLightbox ? 'high' : undefined}
-    />
+    <div
+      className={`lightboxMediaWrap${mediaReady ? '' : ' lightboxMediaWrap--loading'}`}
+      aria-busy={!mediaReady}
+    >
+      {!mediaReady ? <div className="lightboxLoader" aria-hidden /> : null}
+      {media.type === 'video' ? (
+        <video
+          ref={mediaRef}
+          className={mediaClassName}
+          src={media.src}
+          muted
+          playsInline
+          loop
+          autoPlay
+          preload="auto"
+          aria-label={item.alt}
+          onLoadedData={markReady}
+          onCanPlay={markReady}
+          onError={markReady}
+        />
+      ) : (
+        <img
+          ref={mediaRef}
+          className={mediaClassName}
+          src={media.src}
+          alt={item.alt}
+          loading="eager"
+          fetchPriority="high"
+          onLoad={markReady}
+          onError={markReady}
+        />
+      )}
+    </div>
   )
 }
 
@@ -327,7 +364,7 @@ export default function App() {
           style={lightboxMotionStyle}
         >
           <div className="lightboxPanel" onClick={(e) => e.stopPropagation()}>
-            <MediaView item={activeItem} inLightbox />
+            <LightboxMedia key={activeItem.id} item={activeItem} />
           </div>
           <button
             type="button"
