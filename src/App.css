@@ -56,6 +56,18 @@
   width: 100%;
 }
 
+.mediaLazyRoot {
+  display: block;
+  width: 100%;
+}
+
+.mediaLazyPlaceholder {
+  display: block;
+  width: 100%;
+  min-height: 200px;
+  background: #161616;
+}
+
 .filters {
   display: flex;
   flex-wrap: wrap;

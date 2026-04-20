@@ -110,19 +110,46 @@ function FiltersNav({ className, activeFilter, onSelectFilter, onPick }) {
   )
 }
 
-function MediaView({ item, className, lightboxState }) {
-  const { media } = item
-  if (media.type === 'video') {
-    return (
-      <GridVideo
-        className={className}
-        src={media.src}
-        label={item.alt}
-        lightboxState={lightboxState}
-      />
+function MediaView({ item, className, lightboxState, mediaRevealed, onRevealMedia }) {
+  const wrapRef = useRef(null)
+
+  useEffect(() => {
+    if (mediaRevealed) return
+    const el = wrapRef.current
+    if (!el) return
+    if (typeof IntersectionObserver === 'undefined') {
+      queueMicrotask(() => onRevealMedia(item.id))
+      return
+    }
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((e) => e.isIntersecting)) onRevealMedia(item.id)
+      },
+      { root: null, rootMargin: '200px 0px', threshold: 0 },
     )
-  }
-  return <img className={className} src={media.src} alt={item.alt} loading="lazy" />
+    io.observe(el)
+    return () => io.disconnect()
+  }, [item.id, mediaRevealed, onRevealMedia])
+
+  const { media } = item
+  return (
+    <span ref={wrapRef} className="mediaLazyRoot">
+      {mediaRevealed ? (
+        media.type === 'video' ? (
+          <GridVideo
+            className={className}
+            src={media.src}
+            label={item.alt}
+            lightboxState={lightboxState}
+          />
+        ) : (
+          <img className={className} src={media.src} alt={item.alt} />
+        )
+      ) : (
+        <span className="mediaLazyPlaceholder" aria-hidden />
+      )}
+    </span>
+  )
 }
 
 function lightboxMotionVarsFromRect(rect) {
@@ -148,11 +175,23 @@ export default function App() {
   const [lightboxFromRect, setLightboxFromRect] = useState(null)
   const [lightboxEntered, setLightboxEntered] = useState(false)
   const [navMenuOpen, setNavMenuOpen] = useState(false)
+  const [revealedMediaIds, setRevealedMediaIds] = useState(
+    /** @returns {Set<string>} */ () => new Set(),
+  )
 
   const visibleItems = useMemo(() => {
     if (filter === 'all') return GRID_ITEMS
     return GRID_ITEMS.filter((item) => item.tags.includes(filter))
   }, [filter])
+
+  const revealMedia = useCallback((id) => {
+    setRevealedMediaIds((prev) => {
+      if (prev.has(id)) return prev
+      const next = new Set(prev)
+      next.add(id)
+      return next
+    })
+  }, [])
 
   const closeLightbox = useCallback(() => {
     setActiveItem(null)
@@ -163,11 +202,12 @@ export default function App() {
 
   const openLightboxFromCard = useCallback((item, cardButtonEl) => {
     setNavMenuOpen(false)
+    revealMedia(item.id)
     const r = cardButtonEl?.getBoundingClientRect?.()
     setLightboxFromRect(r ?? null)
     setLightboxEntered(false)
     setActiveItem(item)
-  }, [])
+  }, [revealMedia])
 
   useLayoutEffect(() => {
     if (!activeItem) return undefined
@@ -220,7 +260,7 @@ export default function App() {
   useEffect(() => {
     if (!activeItem) return undefined
     if (!visibleItems.some((i) => i.id === activeItem.id)) {
-      closeLightbox()
+      queueMicrotask(() => closeLightbox())
     }
   }, [activeItem, visibleItems, closeLightbox])
 
@@ -335,7 +375,12 @@ export default function App() {
                   aria-expanded={isFlyout}
                 >
                   <span className="cardInner" onClick={isFlyout ? (e) => e.stopPropagation() : undefined}>
-                    <MediaView item={item} lightboxState={lightboxState} />
+                    <MediaView
+                      item={item}
+                      lightboxState={lightboxState}
+                      mediaRevealed={revealedMediaIds.has(item.id)}
+                      onRevealMedia={revealMedia}
+                    />
                   </span>
                 </button>
               </div>
