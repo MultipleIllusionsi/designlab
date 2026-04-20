@@ -28,33 +28,39 @@ function useFinePointerHover() {
   return matches
 }
 
-function GridVideo({ src, label, className, pauseForLightbox }) {
+function GridVideo({ src, label, className, lightboxState }) {
   const ref = useRef(null)
   const fineHover = useFinePointerHover()
 
   useEffect(() => {
     const el = ref.current
     if (!el) return
-    if (pauseForLightbox) {
+    if (lightboxState === 'dimmed') {
       el.pause()
+      return
+    }
+    if (lightboxState === 'expanded') {
+      void el.play().catch(() => {})
       return
     }
     if (fineHover) return
     void el.play().catch(() => {})
-  }, [pauseForLightbox, fineHover])
+  }, [lightboxState, fineHover])
 
   const onEnter = useCallback(() => {
     if (!fineHover) return
+    if (lightboxState === 'expanded') return
     void ref.current?.play()
-  }, [fineHover])
+  }, [fineHover, lightboxState])
 
   const onLeave = useCallback(() => {
     if (!fineHover) return
+    if (lightboxState === 'expanded') return
     const el = ref.current
     if (!el) return
     el.pause()
     el.currentTime = 0
-  }, [fineHover])
+  }, [fineHover, lightboxState])
 
   return (
     <span className="gridVideoWrap" onMouseEnter={onEnter} onMouseLeave={onLeave}>
@@ -65,7 +71,7 @@ function GridVideo({ src, label, className, pauseForLightbox }) {
         muted
         playsInline
         loop
-        autoPlay={!fineHover && !pauseForLightbox}
+        autoPlay={!fineHover && lightboxState !== 'dimmed'}
         preload="metadata"
         aria-label={label}
       />
@@ -104,7 +110,7 @@ function FiltersNav({ className, activeFilter, onSelectFilter, onPick }) {
   )
 }
 
-function MediaView({ item, className, lightboxOpenForThisItem }) {
+function MediaView({ item, className, lightboxState }) {
   const { media } = item
   if (media.type === 'video') {
     return (
@@ -112,70 +118,11 @@ function MediaView({ item, className, lightboxOpenForThisItem }) {
         className={className}
         src={media.src}
         label={item.alt}
-        pauseForLightbox={lightboxOpenForThisItem}
+        lightboxState={lightboxState}
       />
     )
   }
   return <img className={className} src={media.src} alt={item.alt} loading="lazy" />
-}
-
-/** Lightbox-only: 56px spinner until image or video is ready. */
-function LightboxMedia({ item }) {
-  const [mediaReady, setMediaReady] = useState(false)
-  const mediaRef = useRef(null)
-  const { media } = item
-
-  const markReady = useCallback(() => setMediaReady(true), [])
-
-  useLayoutEffect(() => {
-    const el = mediaRef.current
-    if (!el) return
-    if (media.type === 'image') {
-      if (el instanceof HTMLImageElement && el.complete && el.naturalWidth > 0) {
-        setMediaReady(true)
-      }
-    } else if (el instanceof HTMLVideoElement && el.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
-      setMediaReady(true)
-    }
-  }, [media.type, media.src])
-
-  const mediaClassName = `lightboxMedia${mediaReady ? '' : ' lightboxMedia--pending'}`
-
-  return (
-    <div
-      className={`lightboxMediaWrap${mediaReady ? '' : ' lightboxMediaWrap--loading'}`}
-      aria-busy={!mediaReady}
-    >
-      {!mediaReady ? <div className="lightboxLoader" aria-hidden /> : null}
-      {media.type === 'video' ? (
-        <video
-          ref={mediaRef}
-          className={mediaClassName}
-          src={media.src}
-          muted
-          playsInline
-          loop
-          autoPlay
-          preload="auto"
-          aria-label={item.alt}
-          onLoadedData={markReady}
-          onCanPlay={markReady}
-          onError={markReady}
-        />
-      ) : (
-        <img
-          ref={mediaRef}
-          className={mediaClassName}
-          src={media.src}
-          alt={item.alt}
-          loading="eager"
-          fetchPriority="high"
-          onLoad={markReady}
-          onError={markReady}
-        />
-      )}
-    </div>
-  )
 }
 
 function lightboxMotionVarsFromRect(rect) {
@@ -270,6 +217,13 @@ export default function App() {
     return () => mq.removeEventListener('change', onChange)
   }, [])
 
+  useEffect(() => {
+    if (!activeItem) return undefined
+    if (!visibleItems.some((i) => i.id === activeItem.id)) {
+      closeLightbox()
+    }
+  }, [activeItem, visibleItems, closeLightbox])
+
   const toggleNavMenu = useCallback(() => {
     setNavMenuOpen((o) => !o)
   }, [])
@@ -286,7 +240,14 @@ export default function App() {
 
   return (
     <>
-      <div className={activeItem ? 'page page--behindLightbox' : 'page'}>
+      <div className={activeItem ? 'page page--lightbox' : 'page'}>
+        {activeItem ? (
+          <div
+            className={`lightbox lightboxShell${lightboxEntered ? ' lightbox--open' : ''}`}
+            onClick={closeLightbox}
+            aria-hidden
+          />
+        ) : null}
         <header className="topNav">
           <div className="logoMark">
             <img src={iviLogoSrc} alt="" className="logoImg" width={32} height={32} />
@@ -333,39 +294,56 @@ export default function App() {
           />
         ) : null}
 
-        <main className="masonry" aria-live="polite">
-          {visibleItems.map((item) => (
-            <div
-              key={item.id}
-              className={item.columnSpanAll ? 'masonryItem masonryItem--spanAll' : 'masonryItem'}
-            >
-              <button
-                type="button"
-                className="card"
-                onClick={(e) => openLightboxFromCard(item, e.currentTarget)}
-                aria-haspopup="dialog"
-              >
-                <span className="cardInner">
-                  <MediaView item={item} lightboxOpenForThisItem={activeItem?.id === item.id} />
-                </span>
-              </button>
-            </div>
-          ))}
-        </main>
-      </div>
-
-      {activeItem ? (
-        <div
-          className={`lightbox${lightboxEntered ? ' lightbox--open' : ''}`}
-          role="dialog"
-          aria-modal="true"
-          aria-label={activeItem.alt}
-          onClick={closeLightbox}
-          style={lightboxMotionStyle}
+        <main
+          className={activeItem ? 'masonry masonry--lightbox' : 'masonry'}
+          aria-live="polite"
+          {...(activeItem
+            ? { role: 'dialog', 'aria-modal': true, 'aria-label': activeItem.alt }
+            : {})}
         >
-          <div className="lightboxPanel" onClick={(e) => e.stopPropagation()}>
-            <LightboxMedia key={activeItem.id} item={activeItem} />
-          </div>
+          {visibleItems.map((item) => {
+            const isFlyout = activeItem?.id === item.id
+            const lightboxState =
+              activeItem == null ? 'none' : isFlyout ? 'expanded' : 'dimmed'
+            const spanClass = item.columnSpanAll ? 'masonryItem masonryItem--spanAll' : 'masonryItem'
+            const dimClass =
+              activeItem && !isFlyout ? ' masonryItem--dimmed' : isFlyout ? ' masonryItem--flyoutSource' : ''
+
+            return (
+              <div key={item.id} className={`${spanClass}${dimClass}`}>
+                {isFlyout && lightboxFromRect ? (
+                  <div
+                    className="cardFlyoutPlaceholder"
+                    style={{ height: lightboxFromRect.height }}
+                    aria-hidden
+                  />
+                ) : null}
+                <button
+                  type="button"
+                  className={`card${isFlyout ? ' card--flyoutOpen' : ''}${
+                    isFlyout && lightboxEntered ? ' card--flyoutEntered' : ''
+                  }`}
+                  style={isFlyout ? lightboxMotionStyle : undefined}
+                  onClick={(e) => {
+                    if (isFlyout) {
+                      e.stopPropagation()
+                      return
+                    }
+                    openLightboxFromCard(item, e.currentTarget)
+                  }}
+                  aria-haspopup="dialog"
+                  aria-expanded={isFlyout}
+                >
+                  <span className="cardInner" onClick={isFlyout ? (e) => e.stopPropagation() : undefined}>
+                    <MediaView item={item} lightboxState={lightboxState} />
+                  </span>
+                </button>
+              </div>
+            )
+          })}
+        </main>
+
+        {activeItem ? (
           <button
             type="button"
             className="lightboxClose"
@@ -377,8 +355,8 @@ export default function App() {
           >
             ×
           </button>
-        </div>
-      ) : null}
+        ) : null}
+      </div>
     </>
   )
 }
