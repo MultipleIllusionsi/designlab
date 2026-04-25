@@ -1,5 +1,6 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
+import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import faviconUrl from './assets/iviLogoSvgMono.svg?url'
 import './index.css'
 import App from './App.jsx'
@@ -15,6 +16,10 @@ if (!document.querySelector('link[rel="icon"][data-app-favicon]')) {
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    <App />
+    <BrowserRouter>
+      <Routes>
+        <Route path="/*" element={<App />} />
+      </Routes>
+    </BrowserRouter>
   </StrictMode>,
 )

@@ -1,7 +1,10 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Link, matchPath, useLocation, useNavigate } from 'react-router-dom'
 import { GRID_ITEMS } from './gridItems.js'
 import iviLogoSrc from './assets/iviLogoSvgMono.svg?url'
 import './App.css'
+
+const WORK_DETAIL_PATH = '/w/:itemId'
 
 const FILTERS = [
   { id: 'all', label: 'all' },
@@ -10,94 +13,25 @@ const FILTERS = [
   { id: 'graphic', label: 'graphic' },
 ]
 
-const FINE_POINTER_HOVER_MQ = '(hover: hover) and (pointer: fine)'
-
-function useFinePointerHover() {
-  const [matches, setMatches] = useState(() =>
-    typeof window !== 'undefined' ? window.matchMedia(FINE_POINTER_HOVER_MQ).matches : false,
-  )
-
-  useEffect(() => {
-    const mq = window.matchMedia(FINE_POINTER_HOVER_MQ)
-    const onChange = () => setMatches(mq.matches)
-    onChange()
-    mq.addEventListener('change', onChange)
-    return () => mq.removeEventListener('change', onChange)
-  }, [])
-
-  return matches
-}
-
-function GridVideo({ src, label, className, lightboxState }) {
-  const wrapRef = useRef(null)
-  const videoRef = useRef(null)
-  const fineHover = useFinePointerHover()
-
-  useEffect(() => {
-    const el = videoRef.current
-    if (!el) return
-    if (lightboxState === 'dimmed') {
-      el.pause()
-      return undefined
-    }
-    if (lightboxState === 'expanded') {
-      void el.play().catch(() => {})
-      return undefined
-    }
-    if (fineHover) {
-      el.pause()
-      return undefined
-    }
-
-    const observeEl = wrapRef.current
-    if (!observeEl) return undefined
-    if (typeof IntersectionObserver === 'undefined') {
-      void el.play().catch(() => {})
-      return undefined
-    }
-    const io = new IntersectionObserver(
-      (entries) => {
-        const v = videoRef.current
-        if (!v) return
-        if (entries.some((e) => e.isIntersecting)) void v.play().catch(() => {})
-        else v.pause()
-      },
-      { root: null, rootMargin: '0px', threshold: 0 },
-    )
-    io.observe(observeEl)
-    return () => io.disconnect()
-  }, [lightboxState, fineHover, src])
-
-  const onEnter = useCallback(() => {
-    if (!fineHover) return
-    if (lightboxState === 'expanded') return
-    void videoRef.current?.play()
-  }, [fineHover, lightboxState])
-
-  const onLeave = useCallback(() => {
-    if (!fineHover) return
-    if (lightboxState === 'expanded') return
-    const v = videoRef.current
-    if (!v) return
-    v.pause()
-    v.currentTime = 0
-  }, [fineHover, lightboxState])
-
-  return (
-    <span ref={wrapRef} className="gridVideoWrap" onMouseEnter={onEnter} onMouseLeave={onLeave}>
+function WorkMedia({ item, className, detail }) {
+  const { media, title, alt: altText } = item
+  const src = detail ? media.fullSrc : media.previewSrc
+  if (media.type === 'video') {
+    return (
       <video
-        ref={videoRef}
+        key={detail ? `${item.id}-detail` : item.id}
         className={className}
         src={src}
         muted
-        playsInline
         loop
-        autoPlay={false}
-        preload="metadata"
-        aria-label={label}
+        playsInline
+        autoPlay
+        preload={detail ? 'auto' : 'metadata'}
+        aria-label={title}
       />
-    </span>
-  )
+    )
+  }
+  return <img className={className} src={src} alt={altText} />
 }
 
 function MenuIcon() {
@@ -131,124 +65,77 @@ function FiltersNav({ className, activeFilter, onSelectFilter, onPick }) {
   )
 }
 
-function MediaView({ item, className, lightboxState, mediaRevealed, onRevealMedia }) {
-  const wrapRef = useRef(null)
-
-  useEffect(() => {
-    if (mediaRevealed) return
-    const el = wrapRef.current
-    if (!el) return
-    if (typeof IntersectionObserver === 'undefined') {
-      queueMicrotask(() => onRevealMedia(item.id))
-      return
-    }
-    const io = new IntersectionObserver(
-      (entries) => {
-        if (entries.some((e) => e.isIntersecting)) onRevealMedia(item.id)
-      },
-      { root: null, rootMargin: '200px 0px', threshold: 0 },
-    )
-    io.observe(el)
-    return () => io.disconnect()
-  }, [item.id, mediaRevealed, onRevealMedia])
-
-  const { media } = item
-  return (
-    <span ref={wrapRef} className="mediaLazyRoot">
-      {mediaRevealed ? (
-        media.type === 'video' ? (
-          <GridVideo
-            className={className}
-            src={media.src}
-            label={item.alt}
-            lightboxState={lightboxState}
-          />
-        ) : (
-          <img className={className} src={media.src} alt={item.alt} />
-        )
-      ) : (
-        <span className="mediaLazyPlaceholder" aria-hidden />
-      )}
-    </span>
-  )
-}
-
-function lightboxMotionVarsFromRect(rect) {
-  if (!rect || typeof window === 'undefined') {
-    return { tx: 0, ty: 0, s0: 0.94 }
-  }
-  const iw = window.innerWidth
-  const ih = window.innerHeight
-  const cx = rect.left + rect.width / 2
-  const cy = rect.top + rect.height / 2
-  const tx = cx - iw / 2
-  const ty = cy - ih / 2
-  const s0 = Math.min(
-    0.98,
-    Math.max(0.14, Math.max(rect.width / (iw * 0.96), rect.height / (ih * 0.88))),
-  )
-  return { tx, ty, s0 }
+function workDetailItemFromUrl(pathname) {
+  const m = matchPath({ path: WORK_DETAIL_PATH, end: true, caseSensitive: true }, pathname)
+  if (!m?.params?.itemId) return null
+  return GRID_ITEMS.find((i) => i.id === m.params.itemId) ?? null
 }
 
 export default function App() {
+  const location = useLocation()
+  const navigate = useNavigate()
   const [filter, setFilter] = useState('all')
-  const [activeItem, setActiveItem] = useState(null)
-  const [lightboxFromRect, setLightboxFromRect] = useState(null)
-  const [lightboxEntered, setLightboxEntered] = useState(false)
   const [navMenuOpen, setNavMenuOpen] = useState(false)
-  const [revealedMediaIds, setRevealedMediaIds] = useState(
-    /** @returns {Set<string>} */ () => new Set(),
-  )
+
+  const detailItem = workDetailItemFromUrl(location.pathname)
+  const openItemId = detailItem?.id
 
   const visibleItems = useMemo(() => {
     if (filter === 'all') return GRID_ITEMS
     return GRID_ITEMS.filter((item) => item.tags.includes(filter))
   }, [filter])
 
-  const revealMedia = useCallback((id) => {
-    setRevealedMediaIds((prev) => {
-      if (prev.has(id)) return prev
-      const next = new Set(prev)
-      next.add(id)
-      return next
-    })
-  }, [])
+  const lightboxA11yIndex = useMemo(() => {
+    if (!detailItem) return 0
+    const i = visibleItems.findIndex((x) => x.id === detailItem.id)
+    return i < 0 ? 0 : i
+  }, [detailItem, visibleItems])
 
-  const closeLightbox = useCallback(() => {
-    setActiveItem(null)
-    setLightboxFromRect(null)
-    setLightboxEntered(false)
+  const closeWorkDetail = useCallback(() => {
     setNavMenuOpen(false)
-  }, [])
+    navigate('/')
+  }, [navigate])
 
-  const openLightboxFromCard = useCallback((item, cardButtonEl) => {
-    setNavMenuOpen(false)
-    revealMedia(item.id)
-    const r = cardButtonEl?.getBoundingClientRect?.()
-    setLightboxFromRect(r ?? null)
-    setLightboxEntered(false)
-    setActiveItem(item)
-  }, [revealMedia])
-
-  useLayoutEffect(() => {
-    if (!activeItem) return undefined
-    const reduced =
-      typeof window !== 'undefined' &&
-      window.matchMedia('(prefers-reduced-motion: reduce)').matches
-    const schedule = reduced
-      ? () => requestAnimationFrame(() => setLightboxEntered(true))
-      : () =>
-          requestAnimationFrame(() => {
-            requestAnimationFrame(() => setLightboxEntered(true))
-          })
-    const id = schedule()
-    return () => cancelAnimationFrame(id)
-  }, [activeItem])
+  const goToAdjacent = useCallback(
+    (delta) => {
+      if (!detailItem) return
+      const n = visibleItems.length
+      if (n < 2) return
+      const i = visibleItems.findIndex((x) => x.id === detailItem.id)
+      if (i < 0) return
+      const j = (i + delta + n) % n
+      const newItem = visibleItems[j]
+      if (newItem.id === detailItem.id) return
+      navigate(`/w/${newItem.id}`)
+    },
+    [detailItem, visibleItems, navigate],
+  )
 
   useEffect(() => {
-    if (!activeItem) return undefined
+    const m = matchPath({ path: WORK_DETAIL_PATH, end: true, caseSensitive: true }, location.pathname)
+    if (m?.params?.itemId && !GRID_ITEMS.some((g) => g.id === m.params.itemId)) {
+      queueMicrotask(() => navigate('/', { replace: true }))
+    }
+  }, [location.pathname, navigate])
+
+  /** Detail route is valid for any work id in the catalog — do not close it when a filter hides that card. */
+  useEffect(() => {
+    if (!openItemId) return undefined
     const onKey = (e) => {
-      if (e.key === 'Escape') closeLightbox()
+      if (e.key === 'Escape') {
+        closeWorkDetail()
+        return
+      }
+      if (e.key === 'ArrowLeft') {
+        e.preventDefault()
+        goToAdjacent(-1)
+        return
+      }
+      if (e.key === 'ArrowRight') {
+        e.preventDefault()
+        goToAdjacent(1)
+        return
+      }
     }
     const prevOverflow = document.body.style.overflow
     document.body.style.overflow = 'hidden'
@@ -257,16 +144,16 @@ export default function App() {
       document.body.style.overflow = prevOverflow
       window.removeEventListener('keydown', onKey)
     }
-  }, [activeItem, closeLightbox])
+  }, [openItemId, closeWorkDetail, goToAdjacent])
 
   useEffect(() => {
-    if (!navMenuOpen || activeItem) return undefined
+    if (!navMenuOpen || openItemId) return undefined
     const onKey = (e) => {
       if (e.key === 'Escape') setNavMenuOpen(false)
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [navMenuOpen, activeItem])
+  }, [navMenuOpen, openItemId])
 
   useEffect(() => {
     const mq = window.matchMedia('(min-width: 640px)')
@@ -278,37 +165,17 @@ export default function App() {
     return () => mq.removeEventListener('change', onChange)
   }, [])
 
-  useEffect(() => {
-    if (!activeItem) return undefined
-    if (!visibleItems.some((i) => i.id === activeItem.id)) {
-      queueMicrotask(() => closeLightbox())
-    }
-  }, [activeItem, visibleItems, closeLightbox])
-
   const toggleNavMenu = useCallback(() => {
     setNavMenuOpen((o) => !o)
   }, [])
 
-  const lightboxMotionStyle = useMemo(() => {
-    if (!activeItem) return undefined
-    const m = lightboxMotionVarsFromRect(lightboxFromRect)
-    return {
-      '--lb-tx': `${m.tx}px`,
-      '--lb-ty': `${m.ty}px`,
-      '--lb-s0': String(m.s0),
-    }
-  }, [activeItem, lightboxFromRect])
+  const pageClass = openItemId ? 'page page--lightbox' : 'page'
+  const gridInBackground = openItemId != null
 
   return (
     <>
-      <div className={activeItem ? 'page page--lightbox' : 'page'}>
-        {activeItem ? (
-          <div
-            className={`lightbox lightboxShell${lightboxEntered ? ' lightbox--open' : ''}`}
-            onClick={closeLightbox}
-            aria-hidden
-          />
-        ) : null}
+      <div className={pageClass}>
+        <h1 className="siteBrand">ivi dsgn lab</h1>
         <header className="topNav">
           <div className="logoMark">
             <img src={iviLogoSrc} alt="" className="logoImg" width={32} height={32} />
@@ -346,7 +213,8 @@ export default function App() {
             </div>
           </div>
         </header>
-        {navMenuOpen && !activeItem ? (
+
+        {navMenuOpen && !openItemId ? (
           <button
             type="button"
             className="navMenuBackdrop"
@@ -355,73 +223,108 @@ export default function App() {
           />
         ) : null}
 
-        <main
-          className={activeItem ? 'masonry masonry--lightbox' : 'masonry'}
-          aria-live="polite"
-          {...(activeItem
-            ? { role: 'dialog', 'aria-modal': true, 'aria-label': activeItem.alt }
-            : {})}
-        >
-          {visibleItems.map((item) => {
-            const isFlyout = activeItem?.id === item.id
-            const lightboxState =
-              activeItem == null ? 'none' : isFlyout ? 'expanded' : 'dimmed'
-            const spanClass = item.columnSpanAll ? 'masonryItem masonryItem--spanAll' : 'masonryItem'
-            const dimClass =
-              activeItem && !isFlyout ? ' masonryItem--dimmed' : isFlyout ? ' masonryItem--flyoutSource' : ''
-
-            return (
-              <div key={item.id} className={`${spanClass}${dimClass}`}>
-                {isFlyout && lightboxFromRect ? (
-                  <div
-                    className="cardFlyoutPlaceholder"
-                    style={{ height: lightboxFromRect.height }}
-                    aria-hidden
-                  />
-                ) : null}
-                <button
-                  type="button"
-                  className={`card${isFlyout ? ' card--flyoutOpen' : ''}${
-                    isFlyout && lightboxEntered ? ' card--flyoutEntered' : ''
-                  }`}
-                  style={isFlyout ? lightboxMotionStyle : undefined}
-                  onClick={(e) => {
-                    if (isFlyout) {
-                      e.stopPropagation()
-                      return
-                    }
-                    openLightboxFromCard(item, e.currentTarget)
-                  }}
-                  aria-haspopup="dialog"
-                  aria-expanded={isFlyout}
-                >
-                  <span className="cardInner" onClick={isFlyout ? (e) => e.stopPropagation() : undefined}>
-                    <MediaView
-                      item={item}
-                      lightboxState={lightboxState}
-                      mediaRevealed={revealedMediaIds.has(item.id)}
-                      onRevealMedia={revealMedia}
-                    />
-                  </span>
-                </button>
-              </div>
-            )
-          })}
+        <main className={gridInBackground ? 'workGrid workGrid--lightbox' : 'workGrid'} aria-live="polite">
+          {visibleItems.map((item) => (
+            <div key={item.id} className="workGridItem">
+              <Link
+                to={`/w/${item.id}`}
+                className="card"
+                data-work-item-id={item.id}
+                aria-label={`Open ${item.title}`}
+              >
+                <span className="cardInner">
+                  <div className="cardMediaSlot">
+                    <WorkMedia item={item} className="cardMedia" detail={false} />
+                  </div>
+                  <div className="cardText">
+                    <h3 className="cardTitle">{item.title}</h3>
+                  </div>
+                </span>
+              </Link>
+            </div>
+          ))}
         </main>
 
-        {activeItem ? (
+        {openItemId && detailItem && visibleItems.length > 1 ? (
+          <>
+            <div className="lightboxKeyHint lightboxKeyHint--prev" aria-hidden="true">
+              <span className="lightboxKeyHint__label">Prev</span>
+              <div className="lightboxKeyHint__row" role="presentation">
+                <span className="lightboxKeyHint__key">←</span>
+              </div>
+            </div>
+            <div className="lightboxKeyHint lightboxKeyHint--next" aria-hidden="true">
+              <span className="lightboxKeyHint__label">Next</span>
+              <div className="lightboxKeyHint__row" role="presentation">
+                <span className="lightboxKeyHint__key">→</span>
+              </div>
+            </div>
+            <button
+              type="button"
+              className="lightboxNavZone lightboxNavZone--prev"
+              onClick={(e) => {
+                e.stopPropagation()
+                goToAdjacent(-1)
+              }}
+              tabIndex={-1}
+              aria-label="Previous work"
+            />
+            <button
+              type="button"
+              className="lightboxNavZone lightboxNavZone--next"
+              onClick={(e) => {
+                e.stopPropagation()
+                goToAdjacent(1)
+              }}
+              tabIndex={-1}
+              aria-label="Next work"
+            />
+          </>
+        ) : null}
+
+        {detailItem && (
+          <p id="work-detail-desc" className="lightboxDescription">
+            {detailItem.description}
+          </p>
+        )}
+
+        {detailItem && (
           <button
             type="button"
             className="lightboxClose"
             onClick={(e) => {
               e.stopPropagation()
-              closeLightbox()
+              closeWorkDetail()
             }}
             aria-label="Close"
           >
             ×
           </button>
-        ) : null}
+        )}
+
+        {openItemId && detailItem && (
+          <div
+            className="workDetail"
+            key={detailItem.id}
+            role="dialog"
+            aria-modal
+            aria-label={`${detailItem.title} (${lightboxA11yIndex + 1} of ${visibleItems.length})`}
+            aria-describedby="work-detail-desc"
+            onClick={(e) => e.stopPropagation()}
+            onPointerDown={(e) => e.stopPropagation()}
+          >
+            <div className="workDetail__inner" onClick={(e) => e.stopPropagation()}>
+              <div className="workDetail__mediaSlot">
+                <WorkMedia
+                  key={`detail-media-${detailItem.id}`}
+                  item={detailItem}
+                  className="workDetail__media"
+                  detail
+                />
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </>
   )
