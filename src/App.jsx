@@ -1,10 +1,50 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react'
 import { Link, matchPath, useLocation, useNavigate } from 'react-router-dom'
 import { GRID_ITEMS } from './gridItems.js'
 import iviLogoSrc from './assets/iviLogoSvgMono.svg?url'
 import './App.css'
 
 const WORK_DETAIL_PATH = '/w/:itemId'
+
+const LAZY_ROOT_MARGIN = '200px 0px'
+
+/**
+ * @param {string} [rootMargin]
+ * @param {boolean} [enabled]
+ * @returns {readonly [import('react').RefCallback<HTMLDivElement | null>, boolean]}
+ */
+function useViewportLoadGate(rootMargin = LAZY_ROOT_MARGIN, enabled = true) {
+  const ioAvailable = typeof IntersectionObserver !== 'undefined'
+  const [shouldLoad, setShouldLoad] = useState(!enabled || !ioAvailable)
+  const [node, setNode] = useState(/** @type {HTMLDivElement | null} */ (null))
+
+  useLayoutEffect(() => {
+    if (!enabled || shouldLoad) return undefined
+    if (!node) return undefined
+    const io = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            setShouldLoad(true)
+            break
+          }
+        }
+      },
+      { root: null, rootMargin, threshold: 0 },
+    )
+    io.observe(node)
+    return () => io.disconnect()
+  }, [node, enabled, shouldLoad, rootMargin])
+
+  const setRef = useCallback(
+    (/** @type {HTMLDivElement | null} */ el) => {
+      setNode(el)
+    },
+    [],
+  )
+
+  return [setRef, shouldLoad]
+}
 
 const FILTERS = [
   { id: 'all', label: 'all' },
@@ -13,25 +53,58 @@ const FILTERS = [
   { id: 'graphic', label: 'graphic' },
 ]
 
-function WorkMedia({ item, className, detail }) {
+function WorkMedia({ item, className, detail, lazy = false }) {
   const { media, title, alt: altText } = item
   const src = detail ? media.fullSrc : media.previewSrc
-  if (media.type === 'video') {
-    return (
-      <video
-        key={detail ? `${item.id}-detail` : item.id}
-        className={className}
-        src={src}
-        muted
-        loop
-        playsInline
-        autoPlay
-        preload={detail ? 'auto' : 'metadata'}
-        aria-label={title}
-      />
-    )
+  const [setContainerRef, loadInView] = useViewportLoadGate(LAZY_ROOT_MARGIN, lazy)
+
+  if (!lazy) {
+    if (media.type === 'video') {
+      return (
+        <video
+          key={detail ? `${item.id}-detail` : item.id}
+          className={className}
+          src={src}
+          muted
+          loop
+          playsInline
+          autoPlay
+          preload="auto"
+          aria-label={title}
+        />
+      )
+    }
+    return <img className={className} src={src} alt={altText} decoding="async" fetchPriority="high" />
   }
-  return <img className={className} src={src} alt={altText} />
+
+  // Grid: IntersectionObserver gates CDN requests. Native `loading=lazy` does not defer <video> fetches, so gating the `src` is required.
+  return (
+    <div ref={setContainerRef} className={className} style={{ position: 'absolute', inset: 0 }}>
+      {loadInView && media.type === 'video' ? (
+        <video
+          key={item.id}
+          className={className}
+          src={src}
+          muted
+          loop
+          playsInline
+          autoPlay
+          preload="auto"
+          aria-label={title}
+        />
+      ) : null}
+      {loadInView && media.type === 'image' ? (
+        <img
+          className={className}
+          src={src}
+          alt={altText}
+          loading="eager"
+          decoding="async"
+          fetchPriority="low"
+        />
+      ) : null}
+    </div>
+  )
 }
 
 function MenuIcon() {
@@ -234,7 +307,7 @@ export default function App() {
               >
                 <span className="cardInner">
                   <div className="cardMediaSlot">
-                    <WorkMedia item={item} className="cardMedia" detail={false} />
+                    <WorkMedia item={item} className="cardMedia" detail={false} lazy />
                   </div>
                   <div className="cardText">
                     <h3 className="cardTitle">{item.title}</h3>
