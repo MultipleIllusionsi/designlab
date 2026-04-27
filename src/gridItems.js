@@ -97,27 +97,27 @@ export const GRID_ITEMS = [
   item('1', ['interface'], 'Terminal', cloudVideo('1_terminal_video.mp4'), {
     title: 'Terminal',
     description:
-      'An animation of terminal for intermediate state of payment',
+      'An animation of terminal for an intermediate state of payment process',
   }),
-  item('2', ['interface', 'motion'], 'Tab bar', cloudVideo('2_tabbar_video.mp4'), {
+  item('2', ['interface', 'motion'], 'Tab Bar', cloudVideo('2_tabbar_video.mp4'), {
     title: 'Tab Bar',
     description:
       'An animated tabbar with our special icon deformation',
   }),
-  item('3', ['graphic'], 'Logotype', cloudImage('4_logotype_picture.jpg'), {
-    title: 'Logotype',
+  item('3', ['graphic'], 'Logotype refresh', cloudImage('4_logotype_picture.jpg'), {
+    title: 'Logotype refresh',
     description:
-      'Visual refresh of our logotype',
+      'Visual refresh of ivi logotype',
   }),
   item('4', ['motion'], 'Room showreel', cloudVideo('14_roomshowreel_video.mp4'), {
     title: 'Room showreel',
     description:
-      'Part of the big product showreel [_link_]',
+      'A part of the big product showreel [_link_]',
   }),
   item('5', ['interface', 'graphic'], 'Empty state', cloudImage('5_emptystate_picture.png'), {
     title: 'Empty state',
     description:
-      'Friendly illustration that indicates «nothing here»',
+      'Friendly illustration that indicates «There is no internet»',
   }),
   item('6', ['interface'], 'Content card', cloudImage('6_contentcard_picture.png'), {
     title: 'Content card',
@@ -132,102 +132,102 @@ export const GRID_ITEMS = [
   item('8', ['motion', 'graphic'], 'Illustration showreel', cloudVideo('17_illustrationshowreel_video.mp4'), {
     title: 'Illustration showreel',
     description:
-      'Character-led motion and illustration in one reel for product marketing',
+      'A part of the big product showreel [_link_]',
   }),
   item('9', ['interface'], 'Context menu', cloudVideo('3_contextmenu_video.mp4'), {
     title: 'Context menu',
     description:
-      'A radial-style menu that keeps frequent actions at thumb reach on the remote',
+      'An app menu with frequent actions that opens on long tap gesture',
   }),
-  item('10', ['interface'], 'Avatars STB', cloudImage('9_avatarsstb_picture.png'), {
-    title: 'Avatars STB',
+  item('10', ['interface'], 'TV child avatars', cloudImage('9_avatarsstb_picture.png'), {
+    title: 'TV child avatars',
     description:
-      'Profile avatars and picker layout tuned for 10-foot interfaces',
+      'Concept of picking avatar in a child profile on TV',
   }),
-  item('11', ['motion', 'graphic', 'interface'], 'Results pillow', cloudVideo('8_resultspillow_video.mp4'), {
-    title: 'Results pillow',
+  item('11', ['motion', 'graphic', 'interface'], 'Endscreen visuals', cloudVideo('8_resultspillow_video.mp4'), {
+    title: 'Endscreen visuals',
     description:
-      'A floating result surface for search: fast to scan, hard to miss',
+      'An inflated pillows we are using in endscreens (after buying subscription, for example)',
   }),
   item('12', ['motion'], 'Audio poster animation', cloudVideo('13_audioposteranimation_video.mp4'), {
     title: 'Audio poster animation',
     description:
-      'A looping audio poster that makes static key art feel alive in rows',
+      'A looping effect that makes static poster feel alive. Made with code, actually.',
   }),
   item('13', ['motion', 'graphic'], 'Font showreel', cloudVideo('15_fontshowreel_video.mp4'), {
     title: 'Font showreel',
     description:
-      'Showcases the brand type system in large display and long reading blocks',
+      'A part of the big font showreel [_link_]',
   }),
-  item('14', ['interface', 'graphic'], 'STB login', cloudImage('18_stblogin_picture.png'), {
-    title: 'STB login',
+  item('14', ['interface'], 'TV login', cloudImage('18_stblogin_picture.png'), {
+    title: 'TV login',
     description:
-      'Sign-in and pairing flows that stay simple on a TV remote and phone bridge',
+      'A welcome page on TV with focus on quick sign-in flow (phone-TV bridge)',
   }),
-  item('15', ['interface', 'motion'], 'Audio VPK', cloudVideo('28_audiovpk_video.mp4'), {
-    title: 'Audio VPK',
+  item('15', ['interface', 'motion'], 'Audio promo video', cloudVideo('28_audiovpk_video.mp4'), {
+    title: 'Audio promo video',
     description:
-      'Audio-first vertical product kit for editorial rails and carousels',
+      "A video we've used for promo of new audio content",
   }),
-  item('16', ['interface', 'graphic'], 'VPK mediateka', cloudImage('19_vpkamediateka_picture.png'), {
-    title: 'VPK mediateka',
+  item('16', ['graphic'], 'Amediateka promo', cloudImage('19_vpkamediateka_picture.png'), {
+    title: 'Amediateka promo',
     description:
-      'Library browsing pattern with dense grids and long titles handled gracefully',
+      'A promo visual for Amediateka — one of the biggest subscription inside ivi',
   }),
-  item('17', ['interface', 'graphic'], 'KKS TB concept', cloudImage('24_kkstbconcept_picture.png'), {
-    title: 'KKS TB concept',
+  item('17', ['interface', 'graphic'], 'Detail series card on TV', cloudImage('24_kkstbconcept_picture.png'), {
+    title: 'Detail series card on TV',
     description:
-      'A concept for kids’ content: playful without abandoning the core design language',
+      'A concept of series card with focus on progress of viewing',
   }),
-  item('18', ['interface'], 'Login tablet', cloudImage('20_logintablet_picture.jpg'), {
-    title: 'Login tablet',
+  item('18', ['interface', 'graphic'], 'Login • App & Web', cloudImage('20_logintablet_picture.jpg'), {
+    title: 'Login • App & Web',
     description:
-      'A tablet-oriented login and QR bridge layout matching the main TV app',
+      'A refresh and simplified login flow on web & app platforms',
   }),
-  item('19', ['interface', 'motion'], 'Audio empty', cloudVideo('21_audioempty_video.mp4'), {
-    title: 'Audio empty',
+  item('19', ['interface', 'motion'], 'Audio empty state', cloudVideo('21_audioempty_video.mp4'), {
+    title: 'Audio empty state',
     description:
-      'An empty state when the audio library has no items yet, with motion in the key art',
+      'An animated empty state when a user has no audio content added yet',
   }),
-  item('20', ['graphic'], 'New year logos', cloudImage('23_newyearlogos_picture.jpg'), {
-    title: 'New year logos',
+  item('20', ['graphic'], 'New year logo', cloudImage('23_newyearlogos_picture.jpg'), {
+    title: 'New year logo',
     description:
-      'Seasonal mark explorations and treatments for campaigns and in-app takeovers',
+      'New year representation of ivi logo',
   }),
-  item('21', ['interface', 'motion'], 'STB communication', cloudVideo('16_stolbcommucation_video.mp4'), {
-    title: 'STB communication',
+  item('21', ['graphic', 'motion'], 'Seeking for new talents', cloudVideo('16_stolbcommucation_video.mp4'), {
+    title: 'Seeking for new talents',
     description:
-      'System toasts, banners, and system-level messaging on the set-top box',
+      'A video for HR, to find new talents for design team',
   }),
-  item('22', ['interface', 'motion'], 'Tab bar download', cloudVideo('22_tabbardownload_video.mp4'), {
-    title: 'Tab bar download',
+  item('22', ['interface', 'motion'], 'Tab bar downloading', cloudVideo('22_tabbardownload_video.mp4'), {
+    title: 'Tab bar downloading',
     description:
-      'Download and offline affordances in the same tab bar you already use daily',
+      'A visual indicator of current progress in app tabbar',
   }),
   item('23', ['motion', 'graphic'], 'Neuro search logo', cloudVideo('12_neurosearchlogo_video.mp4'), {
     title: 'Neuro search logo',
     description:
-      'A kinetic logo for AI search moments: short loop, high recall, on-brand color',
+      'An identity for loader in new neuro search',
   }),
-  item('24', ['graphic'], 'New year sharing', cloudImage('26_newyearsharing_picture.jpg'), {
-    title: 'New year sharing',
+  item('24', ['interface', 'graphic'], 'New year sharing button', cloudImage('26_newyearsharing_picture.jpg'), {
+    title: 'New year sharing button',
     description:
-      'A festive sharing visual with enough negative space for partner logos',
+      "A festive visual for subscription sharing in product. Before this idea we've tried piece of olivier salad :)",
   }),
   item('25', ['motion', 'graphic'], 'Tamagochi', cloudVideo('27_tamagochi_video.mp4'), {
     title: 'Tamagochi',
     description:
-      'Playful character motion that sits beside real product UI, not on top of it',
+      'A concept of character who lives inside app',
   }),
   item('26', ['motion'], 'Mini drama showreel', cloudVideo('25_minidramashowreel_video.mp4'), {
     title: 'Mini drama showreel',
     description:
-      'A compact reel for short-form vertical drama: hooks in the first second',
+      'A part of the minidramas presentation video [_link_]',
   }),
-  item('27', ['motion', 'interface'], 'Pull to refresh', cloudVideo('11_pulltorefresh_video.mp4'), {
-    title: 'Pull to refresh',
+  item('27', ['motion', 'interface'], 'Pull-to-refresh', cloudVideo('11_pulltorefresh_video.mp4'), {
+    title: 'Pull-to-refresh',
     description:
-      'Pull-to-refresh behavior adapted for the TV remote, not a touch screen',
+      'A concept of pull-to-refresh feature in app, based on idea of showing different stylish logotypes',
   }),
   item('28', ['motion', 'interface'], 'Mutual view', cloudVideo('10_sharingplayer_video.mp4'), {
     title: 'Mutual view',
@@ -244,18 +244,18 @@ export const GRID_ITEMS = [
     description:
       'An app comminucation to present a new type of content — minidramas',
   }),
-  item('31', ['motion', 'graphic'], 'Juja #1', cloudVideo('juja_sad_toys.mp4'), {
+  item('31', ['motion', 'graphic'], 'Sad Juja', cloudVideo('juja_sad_toys.mp4'), {
     title: 'Sad Juja',
     description:
       'An animation of our character for empty state in design system',
   }),
-  item('32', ['graphic'], 'Juja #2', cloudImage('juja_lying.png'), {
+  item('32', ['graphic'], 'Lying Juja', cloudImage('juja_lying.png'), {
     title: 'Lying Juja',
     description:
       'An our character in a promo activities',
   }),
-  item('33', ['graphic'], 'Juja #3', cloudImage('juja_back.png'), {
-    title: 'Juja back',
+  item('33', ['graphic'], "Juja's back", cloudImage('juja_back.png'), {
+    title: "Juja's back",
     description:
       'An our character in a promo activities',
   }),
@@ -264,8 +264,8 @@ export const GRID_ITEMS = [
     description:
       'An illustration for a promo subscription',
   }),
-  item('35', ['graphic'], 'Cover of inner activity', cloudImage('communication_composition.png'), {
-    title: 'Cover of inner activity',
+  item('35', ['graphic'], 'Cover for inner activity', cloudImage('communication_composition.png'), {
+    title: 'Cover for inner activity',
     description:
       'Thats kinda nice',
   }),
