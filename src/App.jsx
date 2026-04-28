@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { Link, matchPath, useLocation, useNavigate } from 'react-router-dom'
+import { BalancedMasonryGrid, Frame } from '@masonry-grid/react'
 import { GRID_ITEMS } from './gridItems.js'
 import iviLogoSrc from './assets/iviLogoSvgMono.svg?url'
 import './App.css'
@@ -53,10 +54,42 @@ const FILTERS = [
   { id: 'graphic', label: 'graphic' },
 ]
 
-function WorkMedia({ item, className, detail, lazy = false }) {
+/** @typedef {{ width: number, height: number }} IntrinsicSize */
+
+function WorkMedia({ item, className, detail, lazy = false, onIntrinsicSize, playbackSuspended = false }) {
   const { media, title, alt: altText } = item
   const src = detail ? media.fullSrc : media.previewSrc
   const [setContainerRef, loadInView] = useViewportLoadGate(LAZY_ROOT_MARGIN, lazy)
+  const reportedIntrinsicRef = useRef(false)
+  const gridVideoRef = useRef(/** @type {HTMLVideoElement | null} */ (null))
+
+  useEffect(() => {
+    reportedIntrinsicRef.current = false
+  }, [item.id, src])
+
+  useEffect(() => {
+    if (!lazy || media.type !== 'video') return undefined
+    const el = gridVideoRef.current
+    if (!el || !loadInView) return undefined
+    if (playbackSuspended) {
+      el.pause()
+      return undefined
+    }
+    const p = el.play()
+    if (p !== undefined && typeof p.catch === 'function') {
+      p.catch(() => {})
+    }
+    return undefined
+  }, [lazy, loadInView, media.type, playbackSuspended, src])
+
+  const reportIntrinsic = useCallback(
+    (/** @type {number} */ w, /** @type {number} */ h) => {
+      if (!onIntrinsicSize || reportedIntrinsicRef.current || w <= 0 || h <= 0) return
+      reportedIntrinsicRef.current = true
+      onIntrinsicSize({ width: w, height: h })
+    },
+    [onIntrinsicSize],
+  )
 
   if (!lazy) {
     if (media.type === 'video') {
@@ -82,15 +115,21 @@ function WorkMedia({ item, className, detail, lazy = false }) {
     <div ref={setContainerRef} className={className} style={{ position: 'absolute', inset: 0 }}>
       {loadInView && media.type === 'video' ? (
         <video
+          ref={gridVideoRef}
           key={item.id}
           className={className}
           src={src}
           muted
           loop
           playsInline
-          autoPlay
+          autoPlay={!playbackSuspended}
           preload="auto"
           aria-label={title}
+          onLoadedMetadata={(e) => {
+            const v = e.currentTarget
+            reportIntrinsic(v.videoWidth, v.videoHeight)
+            if (playbackSuspended) v.pause()
+          }}
         />
       ) : null}
       {loadInView && media.type === 'image' ? (
@@ -101,9 +140,49 @@ function WorkMedia({ item, className, detail, lazy = false }) {
           loading="eager"
           decoding="async"
           fetchPriority="low"
+          onLoad={(e) => {
+            const el = e.currentTarget
+            reportIntrinsic(el.naturalWidth, el.naturalHeight)
+          }}
         />
       ) : null}
     </div>
+  )
+}
+
+/** Placeholder ratio until media loads; masonry reflows when intrinsic size is reported. */
+const GRID_FRAME_FALLBACK = {
+  video: { width: 16, height: 9 },
+  image: { width: 4, height: 5 },
+}
+
+/** Frame wraps media only; width/height follow intrinsic size (see masonry-grid.js.org/api/react). */
+function WorkGridCard({ item, playbackSuspended }) {
+  const [intrinsic, setIntrinsic] = useState(/** @type {IntrinsicSize | null} */ (null))
+  const fb = item.media.type === 'video' ? GRID_FRAME_FALLBACK.video : GRID_FRAME_FALLBACK.image
+  const fw = intrinsic?.width ?? fb.width
+  const fh = intrinsic?.height ?? fb.height
+
+  return (
+    <Frame width={fw} height={fh} className="workGridItem">
+      <Link
+        to={`/w/${item.id}`}
+        className="card"
+        data-work-item-id={item.id}
+        aria-label={`Open ${item.title}`}
+      >
+        <div className="cardMediaSlot">
+          <WorkMedia
+            item={item}
+            className="cardMedia"
+            detail={false}
+            lazy
+            playbackSuspended={playbackSuspended}
+            onIntrinsicSize={setIntrinsic}
+          />
+        </div>
+      </Link>
+    </Frame>
   )
 }
 
@@ -296,27 +375,18 @@ export default function App() {
           />
         ) : null}
 
-        <main className={gridInBackground ? 'workGrid workGrid--lightbox' : 'workGrid'} aria-live="polite">
+        <BalancedMasonryGrid
+          as="main"
+          className={gridInBackground ? 'workGrid workGrid--lightbox' : 'workGrid'}
+          frameWidth={280}
+          gap="32px 32px"
+          style={{ alignItems: 'start' }}
+          aria-live="polite"
+        >
           {visibleItems.map((item) => (
-            <div key={item.id} className="workGridItem">
-              <Link
-                to={`/w/${item.id}`}
-                className="card"
-                data-work-item-id={item.id}
-                aria-label={`Open ${item.title}`}
-              >
-                <span className="cardInner">
-                  <div className="cardMediaSlot">
-                    <WorkMedia item={item} className="cardMedia" detail={false} lazy />
-                  </div>
-                  <div className="cardText">
-                    <h3 className="cardTitle">{item.title}</h3>
-                  </div>
-                </span>
-              </Link>
-            </div>
+            <WorkGridCard key={item.id} item={item} playbackSuspended={gridInBackground} />
           ))}
-        </main>
+        </BalancedMasonryGrid>
 
         {openItemId && detailItem && visibleItems.length > 1 ? (
           <>

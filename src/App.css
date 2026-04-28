@@ -219,28 +219,10 @@
   margin: 0;
   border: none;
   padding: 8px 10px;
-  border-radius: 10px;
   color: #fff;
-  background: rgba(255, 255, 255, 0.08);
-  -webkit-backdrop-filter: blur(20px);
-  backdrop-filter: blur(20px);
-  isolation: isolate;
-  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.15) inset;
+  background: transparent;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
-  transition: background 0.2s ease;
-}
-
-.menuTrigger[aria-expanded='true'] {
-  background: rgba(255, 255, 255, 0.24);
-}
-
-.menuTrigger:hover {
-  background: rgba(255, 255, 255, 0.12);
-}
-
-.menuTrigger[aria-expanded='true']:hover {
-  background: rgba(255, 255, 255, 0.24);
 }
 
 .menuIcon {
@@ -259,39 +241,26 @@
   border-radius: 1px;
 }
 
+/* Layout: BalancedMasonryGrid sets display/gridTemplateColumns/gap inline (see masonry-grid.js.org). */
 .workGrid {
+  overflow: visible !important;
   position: relative;
   z-index: 1;
-  display: grid;
-  grid-template-columns: 1fr;
-  column-gap: 32px;
-  row-gap: 64px;
+  width: 100%;
+  max-width: 100%;
   margin: 0 auto;
+  box-sizing: border-box;
 }
 
-@media (min-width: 640px) {
-  .workGrid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-
-@media (min-width: 1100px) {
-  .workGrid {
-    grid-template-columns: repeat(3, 1fr);
-  }
-}
-
-@media (min-width: 1400px) {
-  .workGrid {
-    grid-template-columns: repeat(4, 1fr);
-  }
-}
-
+/*
+ * Default grid align-items is stretch: every cell in a row matches the tallest item, which breaks
+ * masonry transforms. align-items: start is passed on BalancedMasonryGrid so each Frame keeps its
+ * aspect-ratio height (library reads --width / --height on each frame).
+ */
 .workGridItem {
-  display: flex;
+  box-sizing: border-box;
   min-width: 0;
   width: 100%;
-  align-items: stretch;
 }
 
 .card {
@@ -311,26 +280,35 @@
   -webkit-tap-highlight-color: transparent;
 }
 
-.cardInner {
-  display: flex;
-  flex-direction: column;
-  flex: 1 1 auto;
-  min-height: 0;
-  width: 100%;
+.workGrid:not(.workGrid--lightbox) .card {
+  /* transition: opacity 0.2s ease, transform 0.2s ease; */
+  transition: opacity 0.2s ease, transform 0.72s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transform-origin: center center;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .workGrid:not(.workGrid--lightbox) .card {
+    opacity: 0.72;
+  }
+
+  /* When any card is hovered, dim the rest (hovered card keeps rules below). */
+  .workGrid:not(.workGrid--lightbox):has(.card:hover) .card:not(:hover) {
+    opacity: 0.16;
+  }
+
+  .workGrid:not(.workGrid--lightbox) .card:hover {
+    opacity: 1;
+    transform: scale(1.04);
+    z-index: 1;
+  }
 }
 
 .cardMediaSlot {
   position: relative;
-  flex: 0 0 auto;
+  flex: 1 1 auto;
+  min-height: 0;
   width: 100%;
-  height: 220px;
   background: transparent;
-}
-
-@media (min-width: 1100px) {
-  .cardMediaSlot {
-    height: 240px;
-  }
 }
 
 .cardMedia {
@@ -344,39 +322,6 @@
   max-height: 100%;
   object-fit: contain;
   box-sizing: border-box;
-}
-
-.cardText {
-  flex: 0 0 auto;
-  min-width: 0;
-  width: 100%;
-  box-sizing: border-box;
-}
-
-.cardTitle {
-  margin: 0;
-  flex: 0 0 auto;
-  padding: 20px 16px 14px;
-  font-family: 'Chivo Mono', ui-monospace, monospace;
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.3px;
-  line-height: 100%;
-  font-weight: 400;
-  color: rgba(255, 255, 255, 0.72);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  display: -webkit-box;
-  text-align: center;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 1;
-}
-
-@media (min-width: 640px) {
-  .cardTitle {
-    text-align: left;
-    padding-top: 16px;
-  }
 }
 
 .workGrid--lightbox {
@@ -413,6 +358,12 @@
   pointer-events: none;
   cursor: default;
   -webkit-tap-highlight-color: transparent;
+}
+
+@media (min-width: 1024px) {
+  .workDetail {
+    --work-detail-media-max: min(calc(78dvh + 2vh), calc(100dvh - 12rem + 2vh));
+  }
 }
 
 /* Stretch so children resolve % width inside the grid cell. */
@@ -472,6 +423,14 @@
     transition: none;
   }
 
+  .workGrid:not(.workGrid--lightbox) .card {
+    transition: none;
+  }
+
+  .workGrid:not(.workGrid--lightbox) .card:hover {
+    transform: none;
+  }
+
   .workDetail {
     -webkit-backdrop-filter: none;
     backdrop-filter: none;
@@ -482,8 +441,7 @@
     transition-duration: 0s;
   }
 
-  .filtersDesktop .filter,
-  .menuTrigger {
+  .filtersDesktop .filter {
     -webkit-backdrop-filter: none;
     backdrop-filter: none;
   }
