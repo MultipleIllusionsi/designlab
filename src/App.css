@@ -288,17 +288,17 @@
 
 @media (hover: hover) and (pointer: fine) {
   .workGrid:not(.workGrid--lightbox) .card {
-    opacity: 0.92;
+    opacity: 0.56;
   }
 
   /* When any card is hovered, dim the rest (hovered card keeps rules below). */
-  .workGrid:not(.workGrid--lightbox):has(.card:hover) .card:not(:hover) {
+  /* .workGrid:not(.workGrid--lightbox):has(.card:hover) .card:not(:hover) {
     opacity: 0.32;
-  }
+  } */
 
   .workGrid:not(.workGrid--lightbox) .card:hover {
     opacity: 1;
-    transform: scale(1.04);
+    transform: scale(1.06);
     z-index: 1;
   }
 }
