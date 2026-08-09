@@ -642,3 +642,16 @@
     display: none !important;
   }
 }
+
+/* Catalog load/error status (shown while the CMS fetch resolves). */
+.catalogStatus {
+  width: 100%;
+  margin: 3rem 0;
+  text-align: center;
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.56);
+}
+
+.catalogStatus--error {
+  color: rgba(255, 138, 138, 0.9);
+}

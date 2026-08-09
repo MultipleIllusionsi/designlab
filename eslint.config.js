@@ -5,7 +5,9 @@ import reactRefresh from 'eslint-plugin-react-refresh'
 import { defineConfig, globalIgnores } from 'eslint/config'
 
 export default defineConfig([
-  globalIgnores(['dist']),
+  // `studio` is a separate Sanity project with its own toolchain (Node config
+  // files, its own React setup) — it isn't linted by the frontend's config.
+  globalIgnores(['dist', 'studio']),
   {
     files: ['**/*.{js,jsx}'],
     extends: [

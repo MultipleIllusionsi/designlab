@@ -12,6 +12,14 @@ dist
 dist-ssr
 *.local
 
+# Local env (Vite). Never commit tokens; .env.example is the committed template.
+.env
+.env.*
+!.env.example
+
+# Claude Code personal settings
+.claude/settings.local.json
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { Link, matchPath, useLocation, useNavigate } from 'react-router-dom'
 import { BalancedMasonryGrid, Frame } from '@masonry-grid/react'
-import { GRID_ITEMS } from './gridItems.js'
+import { fetchMediaItems } from './lib/sanity.js'
 import iviLogoSrc from './assets/iviLogoSvgMono.svg?url'
 import './App.css'
 
@@ -62,6 +62,10 @@ function WorkMedia({ item, className, detail, lazy = false, onIntrinsicSize, pla
   const [setContainerRef, loadInView] = useViewportLoadGate(LAZY_ROOT_MARGIN, lazy)
   const reportedIntrinsicRef = useRef(false)
   const gridVideoRef = useRef(/** @type {HTMLVideoElement | null} */ (null))
+  // Grid video only: if the light preview transform isn't available (quota spent
+  // or still processing), fall back to the untouched original so motion still shows.
+  const [gridVideoFallback, setGridVideoFallback] = useState(false)
+  const gridVideoSrc = gridVideoFallback && media.previewFallbackSrc ? media.previewFallbackSrc : src
 
   useEffect(() => {
     reportedIntrinsicRef.current = false
@@ -116,9 +120,9 @@ function WorkMedia({ item, className, detail, lazy = false, onIntrinsicSize, pla
       {loadInView && media.type === 'video' ? (
         <video
           ref={gridVideoRef}
-          key={item.id}
+          key={gridVideoSrc}
           className={className}
-          src={src}
+          src={gridVideoSrc}
           muted
           loop
           playsInline
@@ -129,6 +133,9 @@ function WorkMedia({ item, className, detail, lazy = false, onIntrinsicSize, pla
             const v = e.currentTarget
             reportIntrinsic(v.videoWidth, v.videoHeight)
             if (playbackSuspended) v.pause()
+          }}
+          onError={() => {
+            if (!gridVideoFallback && media.previewFallbackSrc) setGridVideoFallback(true)
           }}
         />
       ) : null}
@@ -158,7 +165,9 @@ const GRID_FRAME_FALLBACK = {
 
 /** Frame wraps media only; width/height follow intrinsic size (see masonry-grid.js.org/api/react). */
 function WorkGridCard({ item, playbackSuspended }) {
-  const [intrinsic, setIntrinsic] = useState(/** @type {IntrinsicSize | null} */ (null))
+  // Seed from the CMS-stored size (images) so masonry reserves space with no reflow;
+  // videos start null and report their size at runtime.
+  const [intrinsic, setIntrinsic] = useState(/** @type {IntrinsicSize | null} */ (item.intrinsic ?? null))
   const fb = item.media.type === 'video' ? GRID_FRAME_FALLBACK.video : GRID_FRAME_FALLBACK.image
   const fw = intrinsic?.width ?? fb.width
   const fh = intrinsic?.height ?? fb.height
@@ -217,10 +226,10 @@ function FiltersNav({ className, activeFilter, onSelectFilter, onPick }) {
   )
 }
 
-function workDetailItemFromUrl(pathname) {
+function workDetailItemFromUrl(pathname, items) {
   const m = matchPath({ path: WORK_DETAIL_PATH, end: true, caseSensitive: true }, pathname)
   if (!m?.params?.itemId) return null
-  return GRID_ITEMS.find((i) => i.id === m.params.itemId) ?? null
+  return items.find((i) => i.id === m.params.itemId) ?? null
 }
 
 export default function App() {
@@ -229,13 +238,36 @@ export default function App() {
   const [filter, setFilter] = useState('all')
   const [navMenuOpen, setNavMenuOpen] = useState(false)
 
-  const detailItem = workDetailItemFromUrl(location.pathname)
+  // Catalog comes from the CMS at runtime (order + metadata); ImageKit serves bytes.
+  const [items, setItems] = useState(/** @type {any[]} */ ([]))
+  const [status, setStatus] = useState('loading') // 'loading' | 'ready' | 'error'
+
+  useEffect(() => {
+    // Runs once; `status` already starts as 'loading'.
+    const ctrl = new AbortController()
+    fetchMediaItems({ signal: ctrl.signal })
+      .then((data) => {
+        setItems(data)
+        setStatus('ready')
+      })
+      .catch((err) => {
+        if (err?.name === 'AbortError') return
+        console.error('Failed to load catalog:', err)
+        setStatus('error')
+      })
+    return () => ctrl.abort()
+  }, [])
+
+  const detailItem = useMemo(
+    () => workDetailItemFromUrl(location.pathname, items),
+    [location.pathname, items],
+  )
   const openItemId = detailItem?.id
 
   const visibleItems = useMemo(() => {
-    if (filter === 'all') return GRID_ITEMS
-    return GRID_ITEMS.filter((item) => item.tags.includes(filter))
-  }, [filter])
+    if (filter === 'all') return items
+    return items.filter((item) => item.tags.includes(filter))
+  }, [filter, items])
 
   const lightboxA11yIndex = useMemo(() => {
     if (!detailItem) return 0
@@ -264,11 +296,14 @@ export default function App() {
   )
 
   useEffect(() => {
+    // Only redirect an unknown id once the catalog has actually loaded — otherwise
+    // a direct link to /w/<id> would bounce to home before data arrives.
+    if (status !== 'ready') return
     const m = matchPath({ path: WORK_DETAIL_PATH, end: true, caseSensitive: true }, location.pathname)
-    if (m?.params?.itemId && !GRID_ITEMS.some((g) => g.id === m.params.itemId)) {
+    if (m?.params?.itemId && !items.some((g) => g.id === m.params.itemId)) {
       queueMicrotask(() => navigate('/', { replace: true }))
     }
-  }, [location.pathname, navigate])
+  }, [status, items, location.pathname, navigate])
 
   /** Detail route is valid for any work id in the catalog — do not close it when a filter hides that card. */
   useEffect(() => {
@@ -387,6 +422,17 @@ export default function App() {
             <WorkGridCard key={item.id} item={item} playbackSuspended={gridInBackground} />
           ))}
         </BalancedMasonryGrid>
+
+        {status === 'loading' && items.length === 0 ? (
+          <p className="catalogStatus" aria-live="polite">
+            Loading…
+          </p>
+        ) : null}
+        {status === 'error' ? (
+          <p className="catalogStatus catalogStatus--error" role="alert">
+            Couldn’t load the gallery. Please refresh.
+          </p>
+        ) : null}
 
         {openItemId && detailItem && visibleItems.length > 1 ? (
           <>

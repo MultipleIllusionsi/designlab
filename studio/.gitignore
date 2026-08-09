@@ -1,0 +1,8 @@
+node_modules
+dist
+.sanity
+# Secrets / local config
+.env
+.env.local
+.env.*.local
+*.log
