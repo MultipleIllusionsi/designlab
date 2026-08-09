@@ -3,7 +3,7 @@
 // edge), so a new card appears a few seconds after publish without a redeploy.
 // projectId/dataset are public values (they ship in every Sanity frontend).
 
-import { detailSrc, gridSrc, gridVideoFallbackSrc } from './imagekit.js'
+import { detailSrc, gridSrc, gridVideoFallbackSrc, mediaTypeFromPath } from './imagekit.js'
 
 const PROJECT_ID = 'vnxnf8kf'
 const DATASET = 'production'
@@ -29,7 +29,13 @@ const QUERY = `*[_type=="mediaItem" && !(_id in path("drafts.**")) && defined(as
 
 /** Map a Sanity doc to the shape the grid/detail components consume. */
 function mapDoc(doc) {
-  const { _id, filePath, type } = doc
+  const { _id, filePath } = doc
+  // Trust the CMS type, but fall back to the extension if it's missing/invalid —
+  // never let a bad `type` turn a video into an (expensive) image transform.
+  const type =
+    doc.type === 'image' || doc.type === 'video'
+      ? doc.type
+      : mediaTypeFromPath(filePath) || 'image'
   const width = typeof doc.width === 'number' ? doc.width : null
   const height = typeof doc.height === 'number' ? doc.height : null
   return {

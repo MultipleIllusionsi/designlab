@@ -13,6 +13,22 @@ export function imagekitUrl(filePath, transform) {
   return transform ? `${base}?tr=${transform}` : base
 }
 
+const VIDEO_EXT = new Set(['mp4', 'mov', 'webm', 'm4v', 'ogv'])
+const IMAGE_EXT = new Set(['png', 'jpg', 'jpeg', 'gif', 'webp', 'avif', 'svg'])
+
+/**
+ * Media type from the file extension. Used as a safety fallback so a missing/bad
+ * CMS `type` can never make us request an image transform on a video file (which
+ * ImageKit processes as a full, expensive video transformation). Returns null if
+ * the extension is unrecognized.
+ */
+export function mediaTypeFromPath(filePath) {
+  const ext = (filePath.split('.').pop() || '').toLowerCase()
+  if (VIDEO_EXT.has(ext)) return 'video'
+  if (IMAGE_EXT.has(ext)) return 'image'
+  return null
+}
+
 // --- Transform presets -------------------------------------------------------
 // Images: format is auto-optimized by ImageKit; c-at_max fits within the box
 // without upscaling (Cloudinary c_limit equivalent).
