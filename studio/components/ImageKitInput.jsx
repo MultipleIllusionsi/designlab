@@ -61,9 +61,11 @@ export function ImageKitInput(props) {
           set(result.height, ['height']),
         ])
       } else {
+        // Show the error state, but DO NOT unset saved type/width/height:
+        // a transient probe failure (network/CORS/wrong endpoint) must never
+        // wipe valid asset metadata on an existing document.
         setProbe(null)
         setStatus('error')
-        onChangeRef.current([unset(['type']), unset(['width']), unset(['height'])])
       }
     }
 
