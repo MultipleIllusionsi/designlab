@@ -2,7 +2,7 @@
 // We store only the file name in the CMS; every transform lives here, so tuning a
 // size is one edit. Keep the endpoint/folder in sync with studio/lib/imagekit.js.
 //
-// Endpoint: https://ik.imagekit.io/ivi/ivi_design_lab/<filePath>
+// Endpoint: https://ik.imagekit.io/ivi/ivi_design_lab/<filePath>  (shared team account, compressed assets)
 
 export const IMAGEKIT_URL_ENDPOINT = 'https://ik.imagekit.io/ivi'
 export const IMAGEKIT_FOLDER = 'ivi_design_lab'
