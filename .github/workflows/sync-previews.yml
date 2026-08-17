@@ -1,0 +1,30 @@
+name: sync-previews
+
+# Generates the grid preview clip for any ImageKit video that doesn't have one.
+# Editors upload a single video file; this fills in the light preview later.
+# Costs 0 ImageKit video units (download via orig-true, ffmpeg locally, upload).
+
+on:
+  schedule:
+    - cron: '0 */6 * * *' # every 6 hours
+  workflow_dispatch: {} # manual "Run workflow" button
+
+# Avoid overlapping runs.
+concurrency:
+  group: sync-previews
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install ffmpeg
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+      - name: Sync previews
+        env:
+          IMAGEKIT_PRIVATE_KEY: ${{ secrets.IMAGEKIT_PRIVATE_KEY }}
+        run: node scripts/sync-previews.mjs

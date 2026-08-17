@@ -35,16 +35,24 @@ export function mediaTypeFromPath(filePath) {
 const IMG_GRID = 'w-900,c-at_max'
 const IMG_DETAIL = 'w-2400,c-at_max'
 
-// Video strategy "Вариант 1": grid shows a short, small, looped preview clip
-// (cheap on ImageKit video units); the detail view plays the untouched original
-// (orig-true = 0 video units). See the CDN memory note for the reasoning.
-const VIDEO_GRID_PREVIEW = 'w-640,du-3' // first 3s, 640px wide
+// Video strategy: we do NOT use ImageKit video transforms — they are billed by
+// the SOURCE duration (not the trimmed output), so generating grid previews for
+// the whole library blows the free video-unit quota. Instead, short 3s grid
+// previews are generated locally (ffmpeg, see ASSET_COMPRESSION.md) and uploaded
+// to a `previews/` subfolder. Everything is served with orig-true (0 video units):
+//   grid   = previews/<file>  (tiny local clip)
+//   detail = <file>           (full compressed original)
 const VIDEO_ORIGINAL = 'orig-true'
+
+/** Path of the pre-generated grid preview clip for a video file. */
+function previewPath(filePath) {
+  return `previews/${filePath}`
+}
 
 /** Grid (card) source. */
 export function gridSrc(filePath, type) {
   return type === 'video'
-    ? imagekitUrl(filePath, VIDEO_GRID_PREVIEW)
+    ? imagekitUrl(previewPath(filePath), VIDEO_ORIGINAL)
     : imagekitUrl(filePath, IMG_GRID)
 }
 
@@ -56,10 +64,9 @@ export function detailSrc(filePath, type) {
 }
 
 /**
- * Fallback for a grid video whose preview transform isn't available yet
- * (e.g. monthly video-unit quota spent, or first-transform still processing).
- * Serves the untouched original — heavier, but always works and needs no code
- * change when the quota resets and the light preview starts succeeding.
+ * Fallback for a grid video whose preview clip is missing (e.g. the `previews/`
+ * file wasn't uploaded yet). Serves the full original — heavier, but still
+ * orig-true (0 video units) and always works.
  */
 export function gridVideoFallbackSrc(filePath) {
   return imagekitUrl(filePath, VIDEO_ORIGINAL)
