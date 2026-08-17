@@ -44,8 +44,12 @@ export function ImageKitInput(props) {
       return undefined
     }
 
-    const url = imagekitUrl(filePath)
+    // Video is probed via the ORIGINAL (orig-true = 0 units). A plain video URL
+    // makes ImageKit transcode the WHOLE file and burns video units on every edit;
+    // images use the plain URL (image delivery is free/unlimited).
     const hintedType = mediaTypeFromPath(filePath)
+    const imageUrl = imagekitUrl(filePath)
+    const videoUrl = imagekitUrl(filePath, 'orig-true')
     let cancelled = false
     let teardown = () => {}
     setStatus('loading')
@@ -75,7 +79,7 @@ export function ImageKitInput(props) {
       const onErr = () => persist(null)
       img.addEventListener('load', onLoad)
       img.addEventListener('error', onErr)
-      img.src = url
+      img.src = imageUrl
       teardown = () => {
         img.removeEventListener('load', onLoad)
         img.removeEventListener('error', onErr)
@@ -92,7 +96,7 @@ export function ImageKitInput(props) {
       const onErr = () => (hintedType === null ? probeImage() : persist(null))
       v.addEventListener('loadedmetadata', onMeta)
       v.addEventListener('error', onErr)
-      v.src = url
+      v.src = videoUrl
       teardown = () => {
         v.removeEventListener('loadedmetadata', onMeta)
         v.removeEventListener('error', onErr)
@@ -148,7 +152,7 @@ export function ImageKitInput(props) {
           <Card radius={2} overflow="hidden" style={{ maxWidth: 320 }}>
             {probe.type === 'video' ? (
               <video
-                src={imagekitUrl(filePath)}
+                src={imagekitUrl(filePath, 'orig-true')}
                 muted
                 loop
                 autoPlay
