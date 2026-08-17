@@ -96,6 +96,18 @@ function WorkMedia({ item, className, detail, lazy = false, onIntrinsicSize, pla
   )
 
   if (!lazy) {
+    if (media.type === 'vimeo') {
+      return (
+        <iframe
+          key={`${item.id}-vimeo`}
+          className={className}
+          src={media.embedUrl}
+          title={title}
+          allow="autoplay; fullscreen; picture-in-picture"
+          style={{ border: 0, width: '100%', aspectRatio: '16 / 9' }}
+        />
+      )
+    }
     if (media.type === 'video') {
       return (
         <video
@@ -139,7 +151,7 @@ function WorkMedia({ item, className, detail, lazy = false, onIntrinsicSize, pla
           }}
         />
       ) : null}
-      {loadInView && media.type === 'image' ? (
+      {loadInView && (media.type === 'image' || media.type === 'vimeo') ? (
         <img
           className={className}
           src={src}

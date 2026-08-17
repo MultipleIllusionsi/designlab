@@ -19,24 +19,40 @@ function imageUrl(baseUrl, width) {
   return baseUrl ? `${baseUrl}?w=${width}&auto=format&fit=max&q=75` : null
 }
 
+/** Vimeo link -> autoplaying muted player URL for the detail iframe. */
+function vimeoEmbed(url) {
+  if (!url) return null
+  const m = url.match(/vimeo\.com\/(?:video\/)?(\d+)(?:\/(\w+))?/)
+  if (!m) return null
+  const params = new URLSearchParams({
+    autoplay: '1', muted: '1', loop: '1', title: '0', byline: '0', portrait: '0',
+  })
+  if (m[2]) params.set('h', m[2])
+  return `https://player.vimeo.com/video/${m[1]}?${params}`
+}
+
 const IMG_GRID = 900
 const IMG_DETAIL = 2400
 
-const QUERY = `*[_type=="mediaItem" && !(_id in path("drafts.**")) && (defined(image.asset) || defined(video.asset))]|order(orderRank asc){
-  _id, title, description, alt, tags,
+const QUERY = `*[_type=="mediaItem" && !(_id in path("drafts.**")) && (defined(image.asset) || defined(video.asset) || defined(vimeoUrl))]|order(orderRank asc){
+  _id, description, tags, vimeoUrl,
   "image": image.asset->{url, "w": metadata.dimensions.width, "h": metadata.dimensions.height},
   "video": video.asset->url,
-  "videoPreview": videoPreview.asset->url
+  "videoPreview": videoPreview.asset->url,
+  "vimeoPoster": vimeoPoster.asset->{url, "w": metadata.dimensions.width, "h": metadata.dimensions.height}
 }`
 
 /** Map a Sanity doc to the shape the grid/detail components consume. */
 function mapDoc(doc) {
+  // Description is the single text field now — it drives the detail caption and
+  // doubles as the alt text / aria-labels (Title and Alt were removed).
+  const text = doc.description || ''
   const base = {
     id: doc._id,
     tags: Array.isArray(doc.tags) ? doc.tags : [],
-    alt: doc.alt || '',
-    title: doc.title || '',
-    description: doc.description || '',
+    alt: text,
+    title: text,
+    description: text,
   }
 
   if (doc.image?.url) {
@@ -49,6 +65,22 @@ function mapDoc(doc) {
         previewSrc: imageUrl(url, IMG_GRID),
         fullSrc: imageUrl(url, IMG_DETAIL),
         previewFallbackSrc: null,
+      },
+    }
+  }
+
+  // Vimeo: grid shows the uploaded poster image; detail embeds the Vimeo player.
+  if (doc.vimeoUrl) {
+    const p = doc.vimeoPoster
+    return {
+      ...base,
+      intrinsic: p?.w && p?.h ? { width: p.w, height: p.h } : null,
+      media: {
+        type: 'vimeo',
+        previewSrc: imageUrl(p?.url, IMG_GRID),
+        fullSrc: null,
+        previewFallbackSrc: null,
+        embedUrl: vimeoEmbed(doc.vimeoUrl),
       },
     }
   }
