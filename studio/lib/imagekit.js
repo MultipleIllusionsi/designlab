@@ -1,10 +1,10 @@
 // Shared ImageKit constants + URL helper for the Studio side (preview / probing only).
 // The frontend gets its own copy of the builder in step 4; keep the two in sync.
 //
-// Endpoint the account gave us: https://ik.imagekit.io/ivitest/ivi_design_lab
+// Endpoint the account gave us: https://ik.imagekit.io/ivi/ivi_design_lab
 // We store only the file name in `filePath` (no host, no folder), e.g. "10_sharingplayer_video.mp4".
 
-export const IMAGEKIT_URL_ENDPOINT = 'https://ik.imagekit.io/ivitest'
+export const IMAGEKIT_URL_ENDPOINT = 'https://ik.imagekit.io/ivi'
 export const IMAGEKIT_FOLDER = 'ivi_design_lab'
 
 const VIDEO_EXT = new Set(['mp4', 'mov', 'webm', 'm4v', 'ogv'])
