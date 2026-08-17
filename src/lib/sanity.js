@@ -42,17 +42,27 @@ const QUERY = `*[_type=="mediaItem" && !(_id in path("drafts.**")) && (defined(i
   "vimeoPoster": vimeoPoster.asset->{url, "w": metadata.dimensions.width, "h": metadata.dimensions.height}
 }`
 
+/** Flatten Portable Text blocks to a plain string (for alt text / aria-labels). */
+function blocksToPlainText(blocks) {
+  if (typeof blocks === 'string') return blocks
+  if (!Array.isArray(blocks)) return ''
+  return blocks
+    .filter((b) => b && b._type === 'block' && Array.isArray(b.children))
+    .map((b) => b.children.map((c) => c.text || '').join(''))
+    .join('\n')
+    .trim()
+}
+
 /** Map a Sanity doc to the shape the grid/detail components consume. */
 function mapDoc(doc) {
-  // Description is the single text field now — it drives the detail caption and
-  // doubles as the alt text / aria-labels (Title and Alt were removed).
-  const text = doc.description || ''
+  // Description is Portable Text (rich text with links). Rendered as-is in the
+  // caption; flattened to a plain string for alt text / aria-labels.
   const base = {
     id: doc._id,
     tags: Array.isArray(doc.tags) ? doc.tags : [],
-    alt: text,
-    title: text,
-    description: text,
+    alt: blocksToPlainText(doc.description),
+    title: blocksToPlainText(doc.description),
+    description: Array.isArray(doc.description) ? doc.description : [],
   }
 
   if (doc.image?.url) {

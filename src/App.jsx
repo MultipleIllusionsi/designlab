@@ -1,11 +1,23 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { Link, matchPath, useLocation, useNavigate } from 'react-router-dom'
 import { BalancedMasonryGrid, Frame } from '@masonry-grid/react'
+import { PortableText } from '@portabletext/react'
 import { fetchMediaItems } from './lib/sanity.js'
 import iviLogoSrc from './assets/iviLogoSvgMono.svg?url'
 import './App.css'
 
 const WORK_DETAIL_PATH = '/w/:itemId'
+
+// Renders the rich-text description; links open in a new tab.
+const portableTextComponents = {
+  marks: {
+    link: ({ value, children }) => (
+      <a href={value?.href} target="_blank" rel="noopener noreferrer">
+        {children}
+      </a>
+    ),
+  },
+}
 
 const LAZY_ROOT_MARGIN = '200px 0px'
 
@@ -462,7 +474,9 @@ export default function App() {
             </div>
             <button
               type="button"
-              className="lightboxNavZone lightboxNavZone--prev"
+              className={`lightboxNavZone lightboxNavZone--prev${
+                detailItem.media.type === 'vimeo' ? ' lightboxNavZone--edge' : ''
+              }`}
               onClick={(e) => {
                 e.stopPropagation()
                 goToAdjacent(-1)
@@ -472,7 +486,9 @@ export default function App() {
             />
             <button
               type="button"
-              className="lightboxNavZone lightboxNavZone--next"
+              className={`lightboxNavZone lightboxNavZone--next${
+                detailItem.media.type === 'vimeo' ? ' lightboxNavZone--edge' : ''
+              }`}
               onClick={(e) => {
                 e.stopPropagation()
                 goToAdjacent(1)
@@ -484,9 +500,9 @@ export default function App() {
         ) : null}
 
         {detailItem && (
-          <p id="work-detail-desc" className="lightboxDescription">
-            {detailItem.description}
-          </p>
+          <div id="work-detail-desc" className="lightboxDescription">
+            <PortableText value={detailItem.description} components={portableTextComponents} />
+          </div>
         )}
 
         {detailItem && (

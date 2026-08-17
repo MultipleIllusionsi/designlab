@@ -597,6 +597,18 @@
   cursor: e-resize;
 }
 
+/* Vimeo detail: shrink the nav zones to thin edge strips so the embedded
+   player in the centre stays fully interactive. */
+.lightboxNavZone--prev.lightboxNavZone--edge {
+  right: auto;
+  width: clamp(48px, 12vw, 160px);
+}
+
+.lightboxNavZone--next.lightboxNavZone--edge {
+  left: auto;
+  width: clamp(48px, 12vw, 160px);
+}
+
 .lightboxClose {
   position: fixed;
   top: max(8px, env(safe-area-inset-top, 0px));
@@ -641,6 +653,18 @@
   .navMenuWrap {
     display: none !important;
   }
+}
+
+/* Clickable links inside the rich-text detail description. */
+.lightboxDescription a {
+  color: #00a5ff;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  transition: opacity 0.2s ease;
+}
+
+.lightboxDescription a:hover {
+  opacity: 0.7;
 }
 
 /* Catalog load/error status (shown while the CMS fetch resolves). */

@@ -21,8 +21,31 @@ export const mediaItem = defineType({
     defineField({
       name: 'description',
       title: 'Описание (показывается на детальной странице)',
-      type: 'text',
-      rows: 3,
+      type: 'array',
+      of: [
+        {
+          type: 'block',
+          styles: [{ title: 'Обычный', value: 'normal' }],
+          lists: [],
+          marks: {
+            annotations: [
+              {
+                name: 'link',
+                type: 'object',
+                title: 'Ссылка',
+                fields: [
+                  {
+                    name: 'href',
+                    type: 'url',
+                    title: 'URL',
+                    validation: (rule) => rule.uri({ scheme: ['http', 'https', 'mailto', 'tel'] }),
+                  },
+                ],
+              },
+            ],
+          },
+        },
+      ],
     }),
     defineField({
       name: 'tags',
@@ -112,9 +135,15 @@ export const mediaItem = defineType({
       video: 'video.asset.originalFilename',
     },
     prepare({ description, image, vimeoPoster, vimeoUrl, video }) {
+      const text = Array.isArray(description)
+        ? description
+            .map((b) => (b.children || []).map((c) => c.text || '').join(''))
+            .join(' ')
+            .trim()
+        : description
       const subtitle = image ? 'изображение' : vimeoUrl ? 'vimeo' : video ? `видео · ${video}` : '(нет медиа)'
       return {
-        title: description || '(без описания)',
+        title: text || '(без описания)',
         subtitle,
         media: image || vimeoPoster || undefined,
       }
