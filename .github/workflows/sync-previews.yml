@@ -26,5 +26,5 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y ffmpeg
       - name: Sync previews
         env:
-          IMAGEKIT_PRIVATE_KEY: ${{ secrets.IMAGEKIT_PRIVATE_KEY }}
+          SANITY_WRITE_TOKEN: ${{ secrets.SANITY_WRITE_TOKEN }}
         run: node scripts/sync-previews.mjs

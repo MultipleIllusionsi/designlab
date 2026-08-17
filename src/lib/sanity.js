@@ -1,57 +1,69 @@
-// Runtime data layer: fetch the ordered catalog from Sanity's CDN endpoint.
-// SPA/Vite -> plain fetch against apicdn (Sanity caches the response on their
-// edge), so a new card appears a few seconds after publish without a redeploy.
-// projectId/dataset are public values (they ship in every Sanity frontend).
-
-import { detailSrc, gridSrc, gridVideoFallbackSrc, mediaTypeFromPath } from './imagekit.js'
+// Runtime data layer. Catalog + media both live in Sanity now (no ImageKit):
+// images are transformed on delivery via Sanity CDN query params; videos and
+// their grid previews are served as-is from the Sanity asset CDN.
 
 const PROJECT_ID = 'vnxnf8kf'
 const DATASET = 'production'
 const API_VERSION = 'v2024-10-01'
 
-// Read-only Viewer token. This project's dataset is "public", but (per Sanity's
-// newer access model) that no longer grants anonymous API reads, so the frontend
-// authenticates with a read-only token. Vite inlines VITE_* at build time; the
-// token can only read the already-public published catalog — no write, no drafts.
+// Read-only Viewer token (this project's dataset needs a token even though it's
+// "public"). Vite inlines VITE_* at build time.
 const READ_TOKEN = import.meta.env.VITE_SANITY_READ_TOKEN
 
 if (!READ_TOKEN && import.meta.env.DEV) {
   console.warn('[sanity] VITE_SANITY_READ_TOKEN is not set — the catalog will come back empty.')
 }
 
-// Published docs only (drafts require auth and are excluded belt-and-suspenders),
-// ordered by the drag-and-drop orderRank, with a usable asset.
-const QUERY = `*[_type=="mediaItem" && !(_id in path("drafts.**")) && defined(asset.filePath)]|order(orderRank asc){
+/** Sanity image URL with on-delivery transform (auto webp/avif, no upscale). */
+function imageUrl(baseUrl, width) {
+  return baseUrl ? `${baseUrl}?w=${width}&auto=format&fit=max&q=75` : null
+}
+
+const IMG_GRID = 900
+const IMG_DETAIL = 2400
+
+const QUERY = `*[_type=="mediaItem" && !(_id in path("drafts.**")) && (defined(image.asset) || defined(video.asset))]|order(orderRank asc){
   _id, title, description, alt, tags,
-  "filePath": asset.filePath, "type": asset.type,
-  "width": asset.width, "height": asset.height
+  "image": image.asset->{url, "w": metadata.dimensions.width, "h": metadata.dimensions.height},
+  "video": video.asset->url,
+  "videoPreview": videoPreview.asset->url
 }`
 
 /** Map a Sanity doc to the shape the grid/detail components consume. */
 function mapDoc(doc) {
-  const { _id, filePath } = doc
-  // Trust the CMS type, but fall back to the extension if it's missing/invalid —
-  // never let a bad `type` turn a video into an (expensive) image transform.
-  const type =
-    doc.type === 'image' || doc.type === 'video'
-      ? doc.type
-      : mediaTypeFromPath(filePath) || 'image'
-  const width = typeof doc.width === 'number' ? doc.width : null
-  const height = typeof doc.height === 'number' ? doc.height : null
-  return {
-    id: _id,
+  const base = {
+    id: doc._id,
     tags: Array.isArray(doc.tags) ? doc.tags : [],
     alt: doc.alt || '',
     title: doc.title || '',
     description: doc.description || '',
-    // Known intrinsic size (images) lets masonry reserve space with no reflow;
-    // null (videos) falls back to runtime detection.
-    intrinsic: width && height ? { width, height } : null,
+  }
+
+  if (doc.image?.url) {
+    const { url, w, h } = doc.image
+    return {
+      ...base,
+      intrinsic: w && h ? { width: w, height: h } : null,
+      media: {
+        type: 'image',
+        previewSrc: imageUrl(url, IMG_GRID),
+        fullSrc: imageUrl(url, IMG_DETAIL),
+        previewFallbackSrc: null,
+      },
+    }
+  }
+
+  // Video: grid plays the light preview clip (falls back to the full file), the
+  // detail view plays the full compressed file. Both served as-is (no transform).
+  const full = doc.video
+  return {
+    ...base,
+    intrinsic: null,
     media: {
-      type,
-      previewSrc: gridSrc(filePath, type),
-      fullSrc: detailSrc(filePath, type),
-      previewFallbackSrc: type === 'video' ? gridVideoFallbackSrc(filePath) : null,
+      type: 'video',
+      previewSrc: doc.videoPreview || full,
+      fullSrc: full,
+      previewFallbackSrc: full,
     },
   }
 }
